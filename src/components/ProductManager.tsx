@@ -103,6 +103,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [current, setCurrent] = useState<Partial<Product>>(emptyProduct());
   const [activeSection, setActiveSection] = useState<'basic' | 'images' | 'pricing' | 'stock' | 'attributes' | 'delivery' | 'visibility'>('basic');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importContent, setImportContent] = useState('');
   const [importFormat, setImportFormat] = useState<'csv' | 'json'>('csv');
@@ -239,6 +240,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
     setCurrent({ ...emptyProduct(), categoryId: categories[0]?.id ?? 0 });
     setActiveSection('basic');
     setValidationErrors({});
+    setImagePreview(null);
     setShowModal(true);
   };
 
@@ -246,6 +248,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
     setCurrent({ ...p });
     setActiveSection('basic');
     setValidationErrors({});
+    setImagePreview(null);
     setShowModal(true);
   };
 
@@ -271,7 +274,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
         fd.append('file', file);
         const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const data = await res.json();
-        if (data.success) uploadedUrls.push(data.url);
+        if (data.success) uploadedUrls.push(data.imageUrl || data.url);
       }
 
       if (isGallery) {
@@ -280,18 +283,23 @@ export default function ProductManager({ initialProducts, categories }: Props) {
         const newImages = [...arr, ...uploadedUrls];
         setCurrent(p => ({ ...p, images: JSON.stringify(newImages) }));
       } else {
-        setCurrent(p => ({ ...p, featuredImage: uploadedUrls[0] }));
+        setCurrent(p => ({ ...p, featuredImage: uploadedUrls[0] || '' }));
       }
       showToast('ok', `${uploadedUrls.length} image(s) uploaded.`);
     } catch (err: any) {
       showToast('err', 'Upload failed.');
     } finally {
+      setImagePreview(null);
       setLoading(false);
     }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean) => {
     const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (!isGallery && files[0]) {
+      setImagePreview(URL.createObjectURL(files[0]));
+    }
     await handleUploadFiles(files, isGallery);
     if (e.target) e.target.value = '';
   };
@@ -313,10 +321,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
     setValidationErrors({});
 
     const trimmedName = current.name?.toString().trim() ?? '';
-    const trimmedNameChinese = current.nameChinese?.toString().trim() ?? '';
     const trimmedCode = current.code?.toString().trim() ?? '';
-    const trimmedBarcode = current.barcode?.toString().trim() ?? '';
-    const trimmedSupplier = current.supplier?.toString().trim() ?? '';
     const buyingPrice = Number(current.buyingPrice) || 0;
     const wholesalePrice = Number(current.wholesalePrice) || 0;
     const selectedCategoryId = Number(current.categoryId);
@@ -342,31 +347,24 @@ export default function ProductManager({ initialProducts, categories }: Props) {
       setCurrent(p => ({ ...p, categoryId: resolvedCategoryId }));
     }
 
-    // Validation
+    const hasImage = Boolean(current.featuredImage || current.images?.toString().trim());
     const errs: Record<string, string> = {};
-    if (!trimmedName) errs.name = 'English name is required';
-    if (!trimmedBarcode) errs.barcode = 'Barcode is required';
-    if (!trimmedSupplier) errs.supplier = 'Supplier is required';
-    if (!resolvedCode) errs.code = 'Code is required';
+    if (!trimmedName) errs.name = 'Product name is required';
+    if (!resolvedCode) errs.code = 'Product code is required';
     if (!resolvedCategoryId || resolvedCategoryId <= 0) errs.category = 'Category is required';
     if (buyingPrice < 0) errs.buyingPrice = 'Buying price cannot be negative';
     if (wholesalePrice < 0) errs.wholesalePrice = 'Selling price cannot be negative';
     if (!buyingPrice) errs.buyingPrice = 'Buying price is required';
     if (!wholesalePrice) errs.wholesalePrice = 'Selling price is required';
-    if (!Number(current.stockQuantity) && Number(current.stockQuantity) !== 0) errs.stockQuantity = 'Stock quantity is required';
-    if (!Number(current.qtyPerCarton) || Number(current.qtyPerCarton) <= 0) errs.qtyPerCarton = 'Qty per carton must be greater than 0';
-    if (!Number(current.weight) || Number(current.weight) <= 0) errs.weight = 'Weight is required';
-    if (!current.description?.toString().trim()) errs.description = 'Description is required';
-    if (!current.featuredImage && (!current.images || current.images === '[]')) errs.images = 'At least one image is required';
-    
-    // Warn if selling < buying
+    if (!hasImage) errs.images = 'Product image is required';
+
     if (!asDraft && wholesalePrice && buyingPrice && wholesalePrice < buyingPrice) {
       if (!confirm('Selling price is LOWER than buying price. This will create a loss! Continue saving?')) return;
     }
 
     if (Object.keys(errs).length > 0) {
       setValidationErrors(errs);
-      const fieldOrder = ['name', 'nameChinese', 'barcode', 'supplier', 'code', 'category', 'buyingPrice', 'wholesalePrice', 'stockQuantity', 'qtyPerCarton', 'weight', 'description', 'images'];
+      const fieldOrder = ['name', 'code', 'category', 'buyingPrice', 'wholesalePrice', 'images'];
       const firstInvalid = fieldOrder.find(field => errs[field]);
       if (firstInvalid) focusField(firstInvalid);
       showToast('err', `Please complete: ${Object.values(errs).join(', ')}`);
@@ -376,14 +374,25 @@ export default function ProductManager({ initialProducts, categories }: Props) {
 
     setLoading(true);
     try {
+      let resolvedImages: string[] = [];
+      try {
+        const parsed = JSON.parse(current.images || '[]');
+        if (Array.isArray(parsed)) {
+          resolvedImages = parsed.filter(Boolean);
+        }
+      } catch {}
+      if (current.featuredImage) {
+        resolvedImages = resolvedImages.filter((item) => item !== current.featuredImage);
+        resolvedImages.unshift(current.featuredImage);
+      }
+
       const payload = {
         ...current,
         name: trimmedName,
-        nameChinese: trimmedNameChinese,
-        barcode: trimmedBarcode,
-        supplier: trimmedSupplier,
         code: resolvedCode,
         categoryId: resolvedCategoryId > 0 ? resolvedCategoryId : null,
+        featuredImage: current.featuredImage || null,
+        images: JSON.stringify(resolvedImages.length ? resolvedImages : (current.featuredImage ? [current.featuredImage] : [])),
         isDraft: asDraft,
       };
       const res = await saveProductAction(payload);
@@ -719,7 +728,8 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                     </td>
                     <td className="px-3 py-3">
                       <img src={p.featuredImage || parseImg(p.images)} alt="" loading="lazy"
-                        className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm" />
+                        className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        onError={(e) => { e.currentTarget.src = '/uploads/placeholder.svg'; }} />
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-mono font-bold text-secondary text-[11px]">{p.code}</p>
@@ -834,24 +844,10 @@ export default function ProductManager({ initialProducts, categories }: Props) {
               </button>
             </div>
 
-            {/* Section Tabs */}
-            <div className="bg-gray-100 px-4 py-2 flex gap-1 overflow-x-auto border-b border-gray-200 flex-shrink-0">
-              {[
-                { id: 'basic', label: 'Basic Info', icon: <Box className="w-3.5 h-3.5" /> },
-                { id: 'images', label: 'Images', icon: <ImageIcon className="w-3.5 h-3.5" /> },
-                { id: 'pricing', label: 'Pricing', icon: <DollarSign className="w-3.5 h-3.5" /> },
-                { id: 'stock', label: 'Stock', icon: <Layers className="w-3.5 h-3.5" /> },
-                { id: 'attributes', label: 'Attributes', icon: <Tag className="w-3.5 h-3.5" /> },
-                { id: 'delivery', label: 'Delivery', icon: <Truck className="w-3.5 h-3.5" /> },
-                { id: 'visibility', label: 'Visibility', icon: <Globe className="w-3.5 h-3.5" /> },
-              ].map(s => (
-                <button key={s.id} onClick={() => setActiveSection(s.id as any)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-1.5 whitespace-nowrap transition-colors ${
-                    activeSection === s.id ? 'bg-primary text-white shadow-md' : 'text-gray-600 hover:bg-white'
-                  }`}>
-                  {s.icon}{s.label}
-                </button>
-              ))}
+            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex-shrink-0">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white">
+                <Box className="w-3.5 h-3.5" /> Basic Product Details
+              </div>
             </div>
 
             {/* Form Body */}
@@ -861,14 +857,19 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                 {/* ═══ BASIC INFO ═══ */}
                 {activeSection === 'basic' && (
                   <div className="space-y-5 bg-white p-5 rounded-xl border border-gray-200">
-                    
-                    {/* ── MAIN PRODUCT IMAGE UPLOAD ── */}
-                    <div className="bg-blue-50/50 border-2 border-blue-100 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="bg-blue-50/50 border-2 border-blue-100 rounded-xl p-4 flex flex-col sm:flex-row items-start gap-6">
                       <div className="w-32 h-32 bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center relative flex-shrink-0 overflow-hidden shadow-sm">
-                        {current.featuredImage ? (
+                        {(imagePreview || current.featuredImage) ? (
                           <>
-                            <img src={current.featuredImage} alt="Product Preview" className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => setCurrent(p => ({ ...p, featuredImage: '' }))} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-110">
+                            <img
+                              src={imagePreview || current.featuredImage || '/uploads/placeholder.svg'}
+                              alt="Product preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/uploads/placeholder.svg';
+                              }}
+                            />
+                            <button type="button" onClick={() => { setCurrent(p => ({ ...p, featuredImage: '' })); setImagePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-110">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </>
@@ -876,139 +877,61 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                           <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, false)} />
                             <ImageIcon className="w-8 h-8 text-gray-400 mb-1" />
-                            <span className="text-[10px] font-bold text-primary uppercase">Click to Upload</span>
+                            <span className="text-[10px] font-bold text-primary uppercase">Choose Image</span>
                           </label>
                         )}
                       </div>
-                      <div className="flex-1 text-center sm:text-left">
-                        <h4 className="font-black text-gray-800 text-sm flex items-center justify-center sm:justify-start gap-2">
-                          <Star className="w-4 h-4 text-secondary" /> Main Product Image
+                      <div className="flex-1 text-left">
+                        <h4 className="font-black text-gray-800 text-sm flex items-center gap-2">
+                          <Star className="w-4 h-4 text-secondary" /> Product Image
                         </h4>
                         <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
-                          Upload <strong>one clear photo</strong> of the product. This will be the main image displayed on the website catalog. 
-                          <br/><span className="text-[10px] text-gray-400">Supported: JPG, PNG, WEBP · Max 5MB</span>
+                          Upload a clear product image. This will be shown on the homepage, products page, details page and admin list.
                         </p>
+                        {validationErrors.images && <p className="text-[10px] text-red-500 mt-2">{validationErrors.images}</p>}
                       </div>
                     </div>
 
-                    {/* ── CODE & QUANTITY ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <label className="block font-bold text-gray-700 mb-1">Product Code * <span className="text-[9px] text-gray-400 font-medium">(Auto-generated)</span></label>
+                        <label className="block font-bold text-gray-700 mb-1">Product Code *</label>
                         <input ref={(el) => { fieldRefs.current.code = el; }} value={current.code || ''} onChange={e => setCurrent(p => ({ ...p, code: e.target.value }))}
-                          required className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.code ? 'border-red-300' : 'border-gray-200'}`} />
+                          className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.code ? 'border-red-300' : 'border-gray-200'}`} />
                         {validationErrors.code && <p className="text-[10px] text-red-500 mt-1">{validationErrors.code}</p>}
                       </div>
                       <div>
-                        <label className="block font-bold text-green-700 mb-1">Initial Stock Quantity * <span className="text-[9px] text-gray-400 font-medium">(e.g. 200 items)</span></label>
-                        <input ref={(el) => { fieldRefs.current.stockQuantity = el; }} type="number" required min="0" value={current.stockQuantity || 0} onChange={e => setCurrent(p => ({ ...p, stockQuantity: Number(e.target.value) }))}
-                          className="w-full p-2.5 border-2 border-green-200 rounded-lg outline-none focus:border-green-500 bg-green-50 font-bold text-green-700" />
-                      </div>
-                    </div>
-
-                    {/* ── BARCODE, SUPPLIER, NAMES ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">Barcode *</label>
-                        <input ref={(el) => { fieldRefs.current.barcode = el; }} value={current.barcode || ''} onChange={e => setCurrent(p => ({ ...p, barcode: e.target.value }))}
-                          required className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.barcode ? 'border-red-300' : 'border-gray-200'}`} />
-                        {validationErrors.barcode && <p className="text-[10px] text-red-500 mt-1">{validationErrors.barcode}</p>}
-                      </div>
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">Supplier *</label>
-                        <input ref={(el) => { fieldRefs.current.supplier = el; }} value={current.supplier || ''} onChange={e => setCurrent(p => ({ ...p, supplier: e.target.value }))}
-                          required className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.supplier ? 'border-red-300' : 'border-gray-200'}`} />
-                        {validationErrors.supplier && <p className="text-[10px] text-red-500 mt-1">{validationErrors.supplier}</p>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">English Product Name *</label>
+                        <label className="block font-bold text-gray-700 mb-1">Product Name *</label>
                         <input ref={(el) => { fieldRefs.current.name = el; }} value={current.name || ''} onChange={e => setCurrent(p => ({ ...p, name: e.target.value }))}
-                          required className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white font-bold ${validationErrors.name ? 'border-red-300' : 'border-gray-200'}`} />
+                          className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white font-bold ${validationErrors.name ? 'border-red-300' : 'border-gray-200'}`} />
                         {validationErrors.name && <p className="text-[10px] text-red-500 mt-1">{validationErrors.name}</p>}
                       </div>
                       <div>
-                        <label className="block font-bold text-gray-700 mb-1">Chinese Product Name (中文)</label>
-                        <input ref={(el) => { fieldRefs.current.nameChinese = el; }} value={current.nameChinese || ''} onChange={e => setCurrent(p => ({ ...p, nameChinese: e.target.value }))}
-                          className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.nameChinese ? 'border-red-300' : 'border-gray-200'}`} />
-                      </div>
-                    </div>
-
-                    {/* ── BRAND & MODEL ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">Brand</label>
-                        <input value={current.brand || ''} onChange={e => setCurrent(p => ({ ...p, brand: e.target.value }))}
-                          className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white" />
-                      </div>
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">Model</label>
-                        <input value={current.model || ''} onChange={e => setCurrent(p => ({ ...p, model: e.target.value }))}
-                          className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white" />
-                      </div>
-                    </div>
-
-                    {/* ── CATEGORY ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
-                      <div>
                         <label className="block font-bold text-gray-700 mb-1">Category *</label>
                         <select ref={(el) => { fieldRefs.current.category = el; }} value={current.categoryId || ''} onChange={e => setCurrent(p => ({ ...p, categoryId: Number(e.target.value) }))}
-                          required className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.category ? 'border-red-300' : 'border-gray-200'}`}>
-                          <option value="">— Select Category —</option>
+                          className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.category ? 'border-red-300' : 'border-gray-200'}`}>
+                          <option value="">Select Category</option>
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                         {validationErrors.category && <p className="text-[10px] text-red-500 mt-1">{validationErrors.category}</p>}
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">Short Description</label>
-                      <input value={current.shortDescription || ''} onChange={e => setCurrent(p => ({ ...p, shortDescription: e.target.value }))}
-                        placeholder="One-line product summary..." className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white" />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">Full Description</label>
-                      <textarea ref={(el) => { fieldRefs.current.description = el; }} rows={3} value={current.description || ''} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))}
-                        className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white resize-none ${validationErrors.description ? 'border-red-300' : 'border-gray-200'}`} />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">Specifications</label>
-                        <textarea rows={3} value={current.specifications || ''} onChange={e => setCurrent(p => ({ ...p, specifications: e.target.value }))}
-                          placeholder="Spec 1 | Spec 2 | Spec 3" className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white resize-none" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-1">Buying Price *</label>
+                          <input ref={(el) => { fieldRefs.current.buyingPrice = el; }} type="number" step="0.01" value={current.buyingPrice || ''} onChange={e => setCurrent(p => ({ ...p, buyingPrice: Number(e.target.value) }))}
+                            className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white ${validationErrors.buyingPrice ? 'border-red-300' : 'border-gray-200'}`} />
+                          {validationErrors.buyingPrice && <p className="text-[10px] text-red-500 mt-1">{validationErrors.buyingPrice}</p>}
+                        </div>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-1">Selling Price *</label>
+                          <input ref={(el) => { fieldRefs.current.wholesalePrice = el; }} type="number" step="0.01" value={current.wholesalePrice || ''} onChange={e => setCurrent(p => ({ ...p, wholesalePrice: Number(e.target.value) }))}
+                            className={`w-full p-2.5 border-2 rounded-lg outline-none focus:border-primary bg-white font-bold text-primary ${validationErrors.wholesalePrice ? 'border-red-300' : 'border-primary'}`} />
+                          {validationErrors.wholesalePrice && <p className="text-[10px] text-red-500 mt-1">{validationErrors.wholesalePrice}</p>}
+                        </div>
                       </div>
                       <div>
-                        <label className="block font-bold text-gray-700 mb-1">Warranty</label>
-                        <input value={current.warranty || ''} onChange={e => setCurrent(p => ({ ...p, warranty: e.target.value }))}
-                          placeholder="e.g. 1 Year Manufacturer Warranty"
-                          className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white" />
-                      </div>
-                    </div>
-
-                    {/* Status Quick Toggle */}
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-2">Status Flags</label>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {[
-                          { k: 'isActive', l: '✅ Active' },
-                          { k: 'isFeatured', l: '⭐ Featured' },
-                          { k: 'isNewArrival', l: '🆕 New Arrival' },
-                          { k: 'isBestSeller', l: '🔥 Best Seller' },
-                          { k: 'isOnOffer', l: '🏷️ On Offer' },
-                        ].map(b => (
-                          <label key={b.k} className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                            (current as any)[b.k] ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                          }`}>
-                            <input type="checkbox" checked={!!(current as any)[b.k]}
-                              onChange={e => setCurrent(p => ({ ...p, [b.k]: e.target.checked }))}
-                              className="w-3.5 h-3.5 cursor-pointer" />
-                            <span className="text-[11px] font-bold">{b.l}</span>
-                          </label>
-                        ))}
+                        <label className="block font-bold text-gray-700 mb-1">Description</label>
+                        <textarea ref={(el) => { fieldRefs.current.description = el; }} rows={4} value={current.description || ''} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))}
+                          className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white resize-none" />
                       </div>
                     </div>
                   </div>

@@ -217,6 +217,9 @@ export default function QuoteDrawer() {
                               src={item.image}
                               alt={item.name}
                               className="w-12 h-12 object-cover rounded bg-white border flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = '/uploads/placeholder.svg';
+                              }}
                             />
                             <div className="flex-1 min-w-0 text-xs">
                               <p className="font-bold text-gray-800 truncate">{item.name}</p>

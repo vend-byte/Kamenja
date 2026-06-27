@@ -88,7 +88,7 @@ export default function Header({ categories, settings }: HeaderProps) {
   const parseImg = (s: string) => {
     try { const a = JSON.parse(s); if (Array.isArray(a) && a.length) return a[0]; } catch {}
     if (s && !s.startsWith('[')) return s;
-    return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=300';
+    return '/uploads/placeholder.svg';
   };
 
   return (
@@ -217,6 +217,9 @@ export default function Header({ categories, settings }: HeaderProps) {
                           src={parseImg(p.images)}
                           alt={p.name}
                           className="w-10 h-10 object-cover rounded bg-gray-100 flex-shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.src = '/uploads/placeholder.svg';
+                          }}
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-primary truncate">{p.name}</p>

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     const publicUrl = `/uploads/${uniqueFilename}`;
 
-    return NextResponse.json({ success: true, url: publicUrl });
+    return NextResponse.json({ success: true, url: publicUrl, imageUrl: publicUrl });
   } catch (error: any) {
     console.error('Upload Error:', error);
     return NextResponse.json({ error: 'Failed to upload image.' }, { status: 500 });

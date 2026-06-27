@@ -56,7 +56,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
       if (Array.isArray(a) && a.length) return a[0];
     } catch {}
     if (s && !s.startsWith('[')) return s;
-    return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=600';
+    return '/uploads/placeholder.svg';
   };
 
   const handleAddToQuote = (p: Product) => {
@@ -101,6 +101,9 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
                   alt={p.name}
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.src = '/uploads/placeholder.svg';
+                  }}
                 />
               </div>
 
