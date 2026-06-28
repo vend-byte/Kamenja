@@ -8,18 +8,10 @@ import { eq, and, ne, desc } from 'drizzle-orm';
 import { 
   ArrowLeft, 
   CheckCircle2, 
-  MessageSquare, 
-  ShoppingBag, 
-  ChevronRight, 
-  Lock, 
   ShieldCheck, 
-  FileText,
-  Warehouse,
-  Coins,
-  Package,
-  Boxes
 } from 'lucide-react';
 import DetailClientActions from '@/components/DetailClientActions';
+import ProductImage from '@/components/ProductImage';
 
 interface PageProps {
   params: Promise<{
@@ -30,7 +22,6 @@ interface PageProps {
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
-  // 1. Fetch Product
   const productData = await db
     .select({
       id: products.id,
@@ -61,7 +52,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const p = productData[0];
   const settingsData = await getSettings();
 
-  // 2. Fetch Related Products (same category, excluding current product)
   let related: any[] = [];
   if (p.categoryId) {
     related = await db
@@ -87,7 +77,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
       .orderBy(desc(products.id));
   }
 
-  // Parse images array
+  const FALLBACK = "https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200";
+
   let parsedImages: string[] = [];
   try {
     const parsed = JSON.parse(p.images || '[]');
@@ -101,44 +92,29 @@ export default async function ProductDetailPage({ params }: PageProps) {
   }
 
   if (parsedImages.length === 0) {
-    parsedImages = ['https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200'];
+    parsedImages = [FALLBACK];
   }
 
-  // Format specifications table
   const specList: { name: string; value: string }[] = [];
   if (p.specifications) {
-    // If specifications contains pipes, split by "|" and ":"
     if (p.specifications.includes('|')) {
       const parts = p.specifications.split('|');
       parts.forEach(part => {
         const item = part.split(':');
         if (item.length >= 2) {
-          specList.push({
-            name: item[0].trim(),
-            value: item.slice(1).join(':').trim()
-          });
+          specList.push({ name: item[0].trim(), value: item.slice(1).join(':').trim() });
         } else {
-          specList.push({
-            name: 'Details',
-            value: part.trim()
-          });
+          specList.push({ name: 'Details', value: part.trim() });
         }
       });
     } else {
-      // Standard multiline text
       const lines = p.specifications.split('\n');
       lines.forEach(line => {
         const item = line.split(':');
         if (item.length >= 2) {
-          specList.push({
-            name: item[0].trim(),
-            value: item.slice(1).join(':').trim()
-          });
+          specList.push({ name: item[0].trim(), value: item.slice(1).join(':').trim() });
         } else if (line.trim()) {
-          specList.push({
-            name: 'Specification',
-            value: line.trim()
-          });
+          specList.push({ name: 'Specification', value: line.trim() });
         }
       });
     }
@@ -146,13 +122,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(price);
-  };
-
-  const getWhatsAppLink = (phone: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const formattedPhone = cleanPhone.startsWith('0') ? '254' + cleanPhone.slice(1) : cleanPhone;
-    const text = `Hello KAMENJA ENTERPRISES,\n\nI would like to enquire about this wholesale product:\n- Product Name: ${p.name}\n- Product Code: ${p.code}\n- Wholesale Price: ${formatPrice(p.wholesalePrice)} / carton\n- Carton Quantity: ${p.qtyPerCarton} Pcs\n\nPlease send me more details.`;
-    return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
   };
 
   return (
@@ -183,19 +152,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <span>Back to Catalog</span>
         </Link>
 
-        {/* Main Product presentation */}
+        {/* Main Product */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
           {/* Left Panel: Images */}
           <div className="lg:col-span-6 space-y-4">
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden aspect-video relative">
-              <img
+              <ProductImage
                 src={parsedImages[0]}
                 alt={p.name}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
-                }}
+                fallback={FALLBACK}
               />
               <span className={`absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded shadow text-white ${
                 p.stockStatus === 'In Stock' 
@@ -208,18 +175,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </span>
             </div>
 
-            {/* Thumbnail collection if any */}
             {parsedImages.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
                 {parsedImages.map((imgUrl, i) => (
                   <div key={i} className="aspect-square bg-gray-50 border border-gray-200 rounded overflow-hidden">
-                    <img src={imgUrl} alt={`${p.name} view ${i}`} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200'; }} />
+                    <ProductImage
+                      src={imgUrl}
+                      alt={`${p.name} view ${i}`}
+                      className="w-full h-full object-cover"
+                      fallback={FALLBACK}
+                    />
                   </div>
                 ))}
               </div>
             )}
             
-            {/* Sourcing credentials notice */}
             <div className="bg-gray-50 p-4 rounded border border-gray-150 text-xs space-y-2">
               <h4 className="font-extrabold text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-secondary" />
@@ -234,7 +204,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Right Panel: Buying & Sizing Information */}
+          {/* Right Panel */}
           <div className="lg:col-span-6 space-y-6">
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-secondary tracking-widest uppercase block bg-orange-50 border border-orange-100 py-1 px-2.5 rounded-full w-max">
@@ -248,7 +218,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Price banner */}
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-5 flex items-center justify-between">
               <div>
                 <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Wholesale Price</span>
@@ -262,7 +231,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest border-b border-gray-100 pb-1">Product Description</h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
@@ -270,7 +238,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </p>
             </div>
 
-            {/* Features (Bulleted list) */}
             {p.features && (
               <div className="space-y-2">
                 <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest border-b border-gray-100 pb-1">Key Features</h3>
@@ -285,10 +252,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* Client interactive action handler */}
             <DetailClientActions product={p} settings={settingsData} />
 
-            {/* Specifications table */}
             {specList.length > 0 && (
               <div className="space-y-2.5 pt-4">
                 <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest border-b border-gray-100 pb-1">Technical Specifications</h3>
@@ -306,12 +271,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 </div>
               </div>
             )}
-
           </div>
-
         </div>
 
-        {/* Related Products Panel */}
+        {/* Related Products */}
         {related.length > 0 && (
           <div className="border-t border-gray-200 pt-10 space-y-6">
             <div>
@@ -321,11 +284,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               {related.map((item) => {
-                let imgUrl = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=300';
+                let imgUrl = FALLBACK;
                 try {
                   const arr = JSON.parse(item.images);
                   if (Array.isArray(arr) && arr.length > 0) imgUrl = arr[0];
-                } catch (e) {
+                } catch {
                   if (item.images && !item.images.startsWith('[')) imgUrl = item.images;
                 }
 
@@ -333,7 +296,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   <div key={item.id} className="bg-gray-50 border border-gray-200 rounded p-3 flex flex-col justify-between hover:shadow transition-shadow">
                     <div>
                       <div className="aspect-video bg-white overflow-hidden rounded border border-gray-100 mb-2">
-                        <img src={imgUrl} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }} />
+                        <ProductImage
+                          src={imgUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          fallback="/placeholder.svg"
+                        />
                       </div>
                       <span className="text-[10px] text-gray-400 font-mono block">Code: {item.code}</span>
                       <h4 className="text-xs font-bold text-primary line-clamp-1 mt-1 hover:text-secondary">
