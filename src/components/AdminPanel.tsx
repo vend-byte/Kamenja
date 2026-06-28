@@ -145,15 +145,18 @@ export default function AdminPanel({
       const formData = new FormData(); formData.append('file', file);
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.success) {
-        if (field === 'featured') setCurProd(p => ({ ...p, featuredImage: data.url }));
-        if (field === 'gallery') {
-          let arr = []; try { arr = JSON.parse(curProd.images||'[]'); } catch {}
-          setCurProd(p => ({ ...p, images: JSON.stringify([...(Array.isArray(arr)?arr:[]), data.url]) }));
-        }
-        if (field === 'category') setCurCat(c => ({ ...c, image: data.url }));
-        showToast('ok', 'Image uploaded successfully!');
-      } else throw new Error(data.error);
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Image upload failed.');
+      }
+      const imageUrl = data.imageUrl || data.url;
+      if (field === 'featured') setCurProd(p => ({ ...p, featuredImage: imageUrl }));
+      if (field === 'gallery') {
+        let arr: string[] = [];
+        try { arr = JSON.parse(curProd.images || '[]'); } catch {}
+        setCurProd(p => ({ ...p, images: JSON.stringify([...(Array.isArray(arr) ? arr : []), imageUrl]) }));
+      }
+      if (field === 'category') setCurCat(c => ({ ...c, image: imageUrl }));
+      showToast('ok', 'Image uploaded successfully!');
     } catch (err: any) {
       showToast('err', err.message || 'Image upload failed.');
     } finally { setLoading(false); }

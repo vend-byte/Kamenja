@@ -51,12 +51,18 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
   };
 
   const parseImg = (s: string) => {
+    if (!s) return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
     try {
       const a = JSON.parse(s);
-      if (Array.isArray(a) && a.length) return a[0];
+      if (Array.isArray(a) && a.length) {
+        const firstValid = a.find((item: unknown) => typeof item === 'string' && item.trim().length > 0);
+        return firstValid || 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
+      }
     } catch {}
-    if (s && !s.startsWith('[')) return s;
-    return '/uploads/placeholder.svg';
+    if (typeof s === 'string' && s.trim().startsWith('[')) {
+      return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
+    }
+    return s;
   };
 
   const handleAddToQuote = (p: Product) => {
@@ -102,7 +108,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
-                    e.currentTarget.src = '/uploads/placeholder.svg';
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
                   }}
                 />
               </div>

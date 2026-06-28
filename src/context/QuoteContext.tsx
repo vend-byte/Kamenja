@@ -69,7 +69,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   }, quantity: number = 1) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
-      let imageUrl = '/uploads/placeholder.svg';
+      let imageUrl = '/placeholder.svg';
       try {
         const parsed = JSON.parse(product.images);
         if (Array.isArray(parsed) && parsed.length > 0) {

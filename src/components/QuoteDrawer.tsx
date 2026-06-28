@@ -218,7 +218,7 @@ export default function QuoteDrawer() {
                               alt={item.name}
                               className="w-12 h-12 object-cover rounded bg-white border flex-shrink-0"
                               onError={(e) => {
-                                e.currentTarget.src = '/uploads/placeholder.svg';
+                                e.currentTarget.src = '/placeholder.svg';
                               }}
                             />
                             <div className="flex-1 min-w-0 text-xs">

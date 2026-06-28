@@ -274,7 +274,10 @@ export default function ProductManager({ initialProducts, categories }: Props) {
         fd.append('file', file);
         const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const data = await res.json();
-        if (data.success) uploadedUrls.push(data.imageUrl || data.url);
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Upload failed.');
+        }
+        uploadedUrls.push(data.imageUrl || data.url);
       }
 
       if (isGallery) {
@@ -287,7 +290,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
       }
       showToast('ok', `${uploadedUrls.length} image(s) uploaded.`);
     } catch (err: any) {
-      showToast('err', 'Upload failed.');
+      showToast('err', err.message || 'Upload failed.');
     } finally {
       setImagePreview(null);
       setLoading(false);
@@ -511,8 +514,18 @@ export default function ProductManager({ initialProducts, categories }: Props) {
   };
 
   const parseImg = (s: string): string => {
-    try { const a = JSON.parse(s); if (Array.isArray(a) && a.length) return a[0]; } catch {}
-    return s || 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=200';
+    if (!s) return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=200';
+    try {
+      const a = JSON.parse(s);
+      if (Array.isArray(a) && a.length) {
+        const firstValid = a.find((item: unknown) => typeof item === 'string' && item.trim().length > 0);
+        return firstValid || 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=200';
+      }
+    } catch {}
+    if (typeof s === 'string' && s.trim().startsWith('[')) {
+      return 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=200';
+    }
+    return s;
   };
 
   const galleryImages = useMemo(() => {
@@ -729,7 +742,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                     <td className="px-3 py-3">
                       <img src={p.featuredImage || parseImg(p.images)} alt="" loading="lazy"
                         className="w-12 h-12 object-cover rounded-lg border border-gray-200 shadow-sm"
-                        onError={(e) => { e.currentTarget.src = '/uploads/placeholder.svg'; }} />
+                        onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }} />
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-mono font-bold text-secondary text-[11px]">{p.code}</p>
@@ -862,11 +875,11 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                         {(imagePreview || current.featuredImage) ? (
                           <>
                             <img
-                              src={imagePreview || current.featuredImage || '/uploads/placeholder.svg'}
+                              src={imagePreview || current.featuredImage || '/placeholder.svg'}
                               alt="Product preview"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = '/uploads/placeholder.svg';
+                                e.currentTarget.src = '/placeholder.svg';
                               }}
                             />
                             <button type="button" onClick={() => { setCurrent(p => ({ ...p, featuredImage: '' })); setImagePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-110">
@@ -986,7 +999,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                           <p className="text-[10px] text-gray-500 font-bold mt-1">Add Images</p>
                         </label>
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-3">Tip: Upload multiple images at once. Files saved permanently in /uploads/</p>
+                      <p className="text-[10px] text-gray-400 mt-3">Tip: Upload multiple images at once. Images are stored securely in Cloudinary.</p>
                     </div>
                   </div>
                 )}

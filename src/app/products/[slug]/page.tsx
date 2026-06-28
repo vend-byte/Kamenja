@@ -90,18 +90,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
   // Parse images array
   let parsedImages: string[] = [];
   try {
-    const parsed = JSON.parse(p.images);
+    const parsed = JSON.parse(p.images || '[]');
     if (Array.isArray(parsed)) {
-      parsedImages = parsed;
-    } else {
+      parsedImages = parsed.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0);
+    } else if (typeof p.images === 'string' && p.images.trim()) {
       parsedImages = [p.images];
     }
-  } catch (e) {
-    parsedImages = [p.images || '/uploads/placeholder.svg'];
+  } catch {
+    parsedImages = typeof p.images === 'string' && p.images.trim() ? [p.images] : [];
   }
 
   if (parsedImages.length === 0) {
-    parsedImages = ['/uploads/placeholder.svg'];
+    parsedImages = ['https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200'];
   }
 
   // Format specifications table
@@ -194,7 +194,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 alt={p.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.currentTarget.src = '/uploads/placeholder.svg';
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
                 }}
               />
               <span className={`absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded shadow text-white ${
@@ -213,7 +213,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <div className="grid grid-cols-4 gap-2">
                 {parsedImages.map((imgUrl, i) => (
                   <div key={i} className="aspect-square bg-gray-50 border border-gray-200 rounded overflow-hidden">
-                    <img src={imgUrl} alt={`${p.name} view ${i}`} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/uploads/placeholder.svg'; }} />
+                    <img src={imgUrl} alt={`${p.name} view ${i}`} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200'; }} />
                   </div>
                 ))}
               </div>
@@ -333,7 +333,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   <div key={item.id} className="bg-gray-50 border border-gray-200 rounded p-3 flex flex-col justify-between hover:shadow transition-shadow">
                     <div>
                       <div className="aspect-video bg-white overflow-hidden rounded border border-gray-100 mb-2">
-                        <img src={imgUrl} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/uploads/placeholder.svg'; }} />
+                        <img src={imgUrl} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }} />
                       </div>
                       <span className="text-[10px] text-gray-400 font-mono block">Code: {item.code}</span>
                       <h4 className="text-xs font-bold text-primary line-clamp-1 mt-1 hover:text-secondary">

@@ -29,7 +29,7 @@ pnpm-debug.log*
 
 # Uploads (optional)
 # Uncomment if you DON'T want uploaded images tracked by Git
-# /public/uploads
+# Optional local assets
 
 # TypeScript
 *.tsbuildinfo

@@ -88,7 +88,7 @@ export default function Header({ categories, settings }: HeaderProps) {
   const parseImg = (s: string) => {
     try { const a = JSON.parse(s); if (Array.isArray(a) && a.length) return a[0]; } catch {}
     if (s && !s.startsWith('[')) return s;
-    return '/uploads/placeholder.svg';
+    return '/placeholder.svg';
   };
 
   return (
@@ -218,7 +218,7 @@ export default function Header({ categories, settings }: HeaderProps) {
                           alt={p.name}
                           className="w-10 h-10 object-cover rounded bg-gray-100 flex-shrink-0"
                           onError={(e) => {
-                            e.currentTarget.src = '/uploads/placeholder.svg';
+                            e.currentTarget.src = '/placeholder.svg';
                           }}
                         />
                         <div className="flex-1 min-w-0">

@@ -52,10 +52,10 @@ A complete, modern wholesale e-commerce platform built with Next.js 16, React 19
 - `src/app/`: Next.js App Router pages and API routes.
 - `src/components/`: React components (Admin Panel, Product Manager, Header, Footer, etc.).
 - `src/db/`: Database schema (`schema.ts`), connection (`index.ts`), and seeding logic.
-- `public/`: Static assets and uploaded product images (`public/uploads/`).
+- `public/`: Static assets and shared placeholders.
 
 ## 🖼️ Image Uploads
-Product images uploaded via the Admin Dashboard are stored in the `public/uploads/` directory. Ensure this folder has write permissions if deploying to a server.
+Product images uploaded via the Admin Dashboard are sent directly to Cloudinary and stored as remote URLs, so the app stays compatible with Vercel and other serverless deployments.
 
 ## 🚢 Deployment
 This project requires a **Node.js environment** (VPS or Node.js hosting). It cannot run on standard PHP Shared Hosting.
