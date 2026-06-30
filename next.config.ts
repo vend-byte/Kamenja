@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Allows the dev server to work when opened from your local
+  // network IP (e.g. on your phone or another device), not just
+  // "localhost".
+  allowedDevOrigins: ["192.168.100.44"],
 };
 
 export default nextConfig;
