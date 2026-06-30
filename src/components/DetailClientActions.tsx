@@ -8,10 +8,11 @@ interface Product {
   id: number;
   code: string;
   name: string;
-  wholesalePrice: number;
+  wholesalePrice: number; // price per single piece
   qtyPerCarton: number;
   images: string;
   stockStatus: string;
+  stockQuantity?: number; // total pieces in stock (used to cap carton qty)
 }
 
 interface DetailClientActionsProps {
@@ -25,14 +26,22 @@ interface DetailClientActionsProps {
 export default function DetailClientActions({ product, settings }: DetailClientActionsProps) {
   const { addItem, items, setIsOpen } = useQuote();
 
-  const [qty, setQty]           = useState(1);
+  // ── NEW: piece vs carton toggle ──
+  const [orderType, setOrderType] = useState<'piece' | 'carton'>('carton');
+  const [qty, setQty]             = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
-  const inList     = items.some((i) => i.id === product.id);
-  const currentQty = items.find((i) => i.id === product.id)?.quantity ?? 0;
+  const matchingItem = items.find((i) => i.id === product.id && i.orderType === orderType);
+  const inList     = Boolean(matchingItem);
+  const currentQty = matchingItem?.quantity ?? 0;
 
   const formatPrice = (n: number) =>
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n);
+
+  // ── Live price math, depends on orderType ──
+  const unitPrice   = orderType === 'piece' ? product.wholesalePrice : product.wholesalePrice * product.qtyPerCarton;
+  const totalPieces = orderType === 'piece' ? qty : qty * product.qtyPerCarton;
+  const subtotal     = unitPrice * qty;
 
   /* ── WhatsApp helpers ──────────────────────────────────────────── */
   const buildWaUrl = (phone: string, message: string) => {
@@ -46,12 +55,15 @@ export default function DetailClientActions({ product, settings }: DetailClientA
     `Hello KAMENJA ENTERPRISES. I would like to inquire about *${product.name}* ` +
     `(Code: ${product.code}). Please provide the wholesale price and availability.`;
 
-  // Order-specific message (with quantity details from this page)
+  // Order-specific message (with quantity details from this page) — adapts to piece/carton
   const orderMsg =
-    `Hello KAMENJA ENTERPRISES. I would like to inquire about *${product.name}* ` +
-    `(Code: ${product.code}). I need *${qty} carton${qty > 1 ? 's' : ''}* ` +
-    `(${qty * product.qtyPerCarton} pcs total). ` +
-    `Please provide the wholesale price and availability.`;
+    orderType === 'carton'
+      ? `Hello KAMENJA ENTERPRISES. I would like to inquire about *${product.name}* ` +
+        `(Code: ${product.code}). I need *${qty} carton${qty > 1 ? 's' : ''}* ` +
+        `(${totalPieces} pcs total). Please provide the wholesale price and availability.`
+      : `Hello KAMENJA ENTERPRISES. I would like to inquire about *${product.name}* ` +
+        `(Code: ${product.code}). I need *${qty} piece${qty > 1 ? 's' : ''}*. ` +
+        `Please provide the price and availability.`;
 
   /* ── Handlers ──────────────────────────────────────────────────── */
   const handleAdd = () => {
@@ -65,26 +77,53 @@ export default function DetailClientActions({ product, settings }: DetailClientA
         images: product.images,
         stockStatus: product.stockStatus,
       },
-      qty
+      qty,
+      orderType
     );
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 2200);
-    // Open the quote drawer so customer sees their list
     setIsOpen(true);
   };
 
   const decrement = () => setQty((v) => Math.max(1, v - 1));
   const increment = () => setQty((v) => v + 1);
 
+  const switchType = (type: 'piece' | 'carton') => {
+    setOrderType(type);
+    setQty(1);
+  };
+
   /* ── Render ───────────────────────────────────────────────────── */
   return (
     <div className="space-y-4">
+
+      {/* ── Piece / Carton toggle ── */}
+      <div className="flex rounded-xl border-2 border-gray-200 overflow-hidden text-sm font-bold">
+        <button
+          type="button"
+          onClick={() => switchType('piece')}
+          className={`flex-1 py-3 transition-colors cursor-pointer ${
+            orderType === 'piece' ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Buy by Piece
+        </button>
+        <button
+          type="button"
+          onClick={() => switchType('carton')}
+          className={`flex-1 py-3 transition-colors cursor-pointer border-l-2 border-gray-200 ${
+            orderType === 'carton' ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Buy by Carton
+        </button>
+      </div>
 
       {/* ── Quantity selector ── */}
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-            Select Carton Quantity
+            Select {orderType === 'piece' ? 'Piece' : 'Carton'} Quantity
           </span>
 
           {/* Stepper */}
@@ -105,19 +144,29 @@ export default function DetailClientActions({ product, settings }: DetailClientA
           </div>
         </div>
 
-        {/* Calculation breakdown */}
+        {/* Calculation breakdown — adapts to orderType */}
         <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs overflow-hidden">
           <div className="flex justify-between items-center px-3 py-2.5">
-            <span className="text-gray-500 font-medium">Cartons ordered</span>
-            <strong className="text-primary font-black">{qty} Ctn{qty > 1 ? 's' : ''}</strong>
+            <span className="text-gray-500 font-medium">{orderType === 'piece' ? 'Pieces ordered' : 'Cartons ordered'}</span>
+            <strong className="text-primary font-black">
+              {qty} {orderType === 'piece' ? `Pc${qty > 1 ? 's' : ''}` : `Ctn${qty > 1 ? 's' : ''}`}
+            </strong>
           </div>
+          {orderType === 'carton' && (
+            <div className="flex justify-between items-center px-3 py-2.5">
+              <span className="text-gray-500 font-medium">Total pieces</span>
+              <strong className="text-secondary font-black">{totalPieces} Pcs</strong>
+            </div>
+          )}
           <div className="flex justify-between items-center px-3 py-2.5">
-            <span className="text-gray-500 font-medium">Total pieces</span>
-            <strong className="text-secondary font-black">{qty * product.qtyPerCarton} Pcs</strong>
+            <span className="text-gray-500 font-medium">
+              {orderType === 'piece' ? 'Price per piece' : 'Price per carton'}
+            </span>
+            <strong className="text-gray-700 font-bold">{formatPrice(unitPrice)}</strong>
           </div>
           <div className="flex justify-between items-center px-3 py-2.5 bg-primary/5">
             <span className="text-gray-700 font-bold">Estimated subtotal</span>
-            <strong className="text-primary font-black text-sm">{formatPrice(product.wholesalePrice * qty)}</strong>
+            <strong className="text-primary font-black text-sm">{formatPrice(subtotal)}</strong>
           </div>
         </div>
       </div>
@@ -142,17 +191,19 @@ export default function DetailClientActions({ product, settings }: DetailClientA
           {justAdded ? (
             <>
               <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              <span>Added {qty} Ctn to Quote List!</span>
+              <span>Added {qty} {orderType === 'piece' ? 'Pc' : 'Ctn'}{qty > 1 ? 's' : ''} to Quote List!</span>
             </>
           ) : inList ? (
             <>
               <Plus className="w-5 h-5 flex-shrink-0" />
-              <span>Add {qty} More Ctn ({currentQty} already in list)</span>
+              <span>Add {qty} More {orderType === 'piece' ? 'Pc' : 'Ctn'}{qty > 1 ? 's' : ''} ({currentQty} already in list)</span>
             </>
           ) : (
             <>
               <ShoppingBag className="w-5 h-5 flex-shrink-0" />
-              <span>Request Quote — {qty} Carton{qty > 1 ? 's' : ''}</span>
+              <span>
+                Request Quote — {qty} {orderType === 'piece' ? `Piece${qty > 1 ? 's' : ''}` : `Carton${qty > 1 ? 's' : ''}`}
+              </span>
             </>
           )}
         </button>
@@ -190,7 +241,7 @@ export default function DetailClientActions({ product, settings }: DetailClientA
         <div className="flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2.5 text-xs text-primary font-semibold">
           <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
           <span>
-            This product is in your Quote List — <strong>{currentQty} carton{currentQty > 1 ? 's' : ''}</strong> selected.
+            This product is in your Quote List — <strong>{currentQty} {orderType === 'piece' ? 'piece' : 'carton'}{currentQty > 1 ? 's' : ''}</strong> selected.
           </span>
           <button
             onClick={() => setIsOpen(true)}
@@ -203,7 +254,7 @@ export default function DetailClientActions({ product, settings }: DetailClientA
 
       {/* ── Small disclaimer ── */}
       <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-        * Wholesale prices are per sealed carton. Final quote issued after office review.
+        * Prices shown are per {orderType === 'piece' ? 'single piece' : 'sealed carton'}. Final quote issued after office review.
         <br />Call <a href={`tel:${settings.phone_primary}`} className="text-primary font-bold hover:underline">{settings.phone_primary}</a> for urgent orders.
       </p>
 

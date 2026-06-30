@@ -218,17 +218,22 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="bg-primary/5 border border-primary/10 rounded-lg p-5 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Wholesale Price</span>
-                <span className="text-3xl font-black text-primary">{formatPrice(p.wholesalePrice)}</span>
-                <span className="text-xs text-gray-400 font-medium"> per Brand Carton</span>
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Wholesale Price</span>
+                  <span className="text-3xl font-black text-primary">{formatPrice(p.wholesalePrice)}</span>
+                  <span className="text-xs text-gray-400 font-medium"> per Piece</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Carton Packaging</span>
+                  <span className="text-2xl font-black text-secondary">{p.qtyPerCarton} Pieces</span>
+                  <span className="text-xs text-gray-400 font-medium block">in 1 complete Box</span>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Carton Packaging</span>
-                <span className="text-2xl font-black text-secondary">{p.qtyPerCarton} Pcs</span>
-                <span className="text-xs text-gray-400 font-medium block">in 1 complete Box</span>
-              </div>
+              <p className="text-[11px] text-gray-500 font-medium mt-3 pt-3 border-t border-primary/10">
+                Price for a full carton depends on quantity × price per piece.
+              </p>
             </div>
 
             <div className="space-y-2">

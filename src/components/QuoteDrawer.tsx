@@ -29,8 +29,18 @@ export default function QuoteDrawer() {
 
   if (!isOpen) return null;
 
-  const totalWholesaleValue = items.reduce((acc, item) => acc + (item.wholesalePrice * item.quantity), 0);
-  const totalCartons = items.reduce((acc, item) => acc + item.quantity, 0);
+  // ── Per-line price, correct for both piece and carton orders ──
+  const lineUnitPrice = (item: typeof items[number]) =>
+    item.orderType === 'piece' ? item.wholesalePrice : item.wholesalePrice * item.qtyPerCarton;
+
+  const lineTotal = (item: typeof items[number]) => lineUnitPrice(item) * item.quantity;
+
+  const linePieces = (item: typeof items[number]) =>
+    item.orderType === 'piece' ? item.quantity : item.quantity * item.qtyPerCarton;
+
+  const totalWholesaleValue = items.reduce((acc, item) => acc + lineTotal(item), 0);
+  const totalCartons = items.filter(i => i.orderType === 'carton').reduce((acc, item) => acc + item.quantity, 0);
+  const totalPiecesOnly = items.filter(i => i.orderType === 'piece').reduce((acc, item) => acc + item.quantity, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +71,11 @@ export default function QuoteDrawer() {
           productId: item.id,
           code: item.code,
           name: item.name,
+          orderType: item.orderType,
           qty: item.quantity,
+          unitPrice: lineUnitPrice(item),
           wholesalePrice: item.wholesalePrice,
-          totalPcs: item.quantity * item.qtyPerCarton
+          totalPcs: linePieces(item)
         }))
       };
 
@@ -212,7 +224,7 @@ export default function QuoteDrawer() {
                       </h3>
                       <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto border border-gray-100 rounded-md p-2 bg-gray-50">
                         {items.map((item) => (
-                          <div key={item.id} className="py-2.5 flex items-center gap-3">
+                          <div key={`${item.id}-${item.orderType}`} className="py-2.5 flex items-center gap-3">
                             <img
                               src={item.image}
                               alt={item.name}
@@ -226,16 +238,23 @@ export default function QuoteDrawer() {
                               <p className="text-gray-500 text-[11px]">Code: <span className="font-mono text-secondary font-semibold">{item.code}</span></p>
                               <div className="flex items-center justify-between mt-1">
                                 <span className="text-[11px] text-gray-600">
-                                  {formatPrice(item.wholesalePrice)} / carton
+                                  {formatPrice(lineUnitPrice(item))} / {item.orderType === 'piece' ? 'piece' : 'carton'}
                                 </span>
-                                <span className="text-gray-400">({item.qtyPerCarton} Pcs/Ctn)</span>
+                                {item.orderType === 'carton' && (
+                                  <span className="text-gray-400">({item.qtyPerCarton} Pcs/Ctn)</span>
+                                )}
                               </div>
+                              <span className={`inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                item.orderType === 'piece' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {item.orderType === 'piece' ? 'BY PIECE' : 'BY CARTON'}
+                              </span>
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
                               <div className="flex items-center border border-gray-300 rounded overflow-hidden">
                                 <button
                                   type="button"
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  onClick={() => updateQuantity(item.id, item.orderType, item.quantity - 1)}
                                   className="px-1.5 py-0.5 bg-white text-gray-600 hover:bg-gray-100 font-bold"
                                 >
                                   -
@@ -244,23 +263,26 @@ export default function QuoteDrawer() {
                                   type="number"
                                   min="1"
                                   value={item.quantity}
-                                  onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                                  onChange={(e) => updateQuantity(item.id, item.orderType, parseInt(e.target.value) || 1)}
                                   className="w-8 text-center text-xs font-bold bg-white outline-none border-none py-0.5 h-6"
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.id, item.orderType, item.quantity + 1)}
                                   className="px-1.5 py-0.5 bg-white text-gray-600 hover:bg-gray-100 font-bold"
                                 >
                                   +
                                 </button>
                               </div>
                               <span className="text-[10px] text-gray-500 font-bold">
-                                {item.quantity * item.qtyPerCarton} Pcs Total
+                                {item.orderType === 'piece' ? `${item.quantity} Pcs` : `${linePieces(item)} Pcs Total`}
+                              </span>
+                              <span className="text-[10px] text-primary font-black">
+                                {formatPrice(lineTotal(item))}
                               </span>
                               <button
                                 type="button"
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.id, item.orderType)}
                                 className="text-red-500 hover:text-red-700 p-0.5"
                                 title="Remove item"
                               >
@@ -273,10 +295,18 @@ export default function QuoteDrawer() {
 
                       {/* Estimate Summary */}
                       <div className="bg-primary/5 rounded p-3 mt-3 text-xs border border-primary/10">
-                        <div className="flex justify-between items-center text-gray-700 font-semibold mb-1">
-                          <span>Total Cartons Selected:</span>
-                          <span className="text-primary font-bold">{totalCartons} Cartons</span>
-                        </div>
+                        {totalCartons > 0 && (
+                          <div className="flex justify-between items-center text-gray-700 font-semibold mb-1">
+                            <span>Total Cartons Selected:</span>
+                            <span className="text-primary font-bold">{totalCartons} Cartons</span>
+                          </div>
+                        )}
+                        {totalPiecesOnly > 0 && (
+                          <div className="flex justify-between items-center text-gray-700 font-semibold mb-1">
+                            <span>Total Pieces Selected:</span>
+                            <span className="text-primary font-bold">{totalPiecesOnly} Pcs</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-sm font-bold text-primary">
                           <span>Est. Wholesale Value:</span>
                           <span className="text-secondary">{formatPrice(totalWholesaleValue)}</span>
