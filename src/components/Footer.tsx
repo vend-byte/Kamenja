@@ -194,6 +194,28 @@ export default function Footer({ categories, settings }: FooterProps) {
           </div>
         </div>
       </div>
+
+      {/* 3. DEVELOPER CREDIT BOX */}
+      <div className="bg-primary/95 border-t border-white/10 py-3 px-4 sm:px-6">
+        <p className="max-w-7xl mx-auto text-center text-[11px] text-gray-400 leading-relaxed">
+          Website Developed &amp; Maintained by{' '}
+          <span className="font-semibold text-gray-300">Brycen Lopez Murimi</span>
+          {' '}📞 Contact:{' '}
+          <a
+            href="tel:0708952210"
+            className="text-gray-300 hover:text-secondary transition-colors"
+          >
+            0708952210
+          </a>
+          {' '}✉️ Email:{' '}
+          <a
+            href="mailto:lopezbrycen@gmail.com"
+            className="text-gray-300 hover:text-secondary transition-colors break-all"
+          >
+            lopezbrycen@gmail.com
+          </a>
+        </p>
+      </div>
     </footer>
   );
 }
