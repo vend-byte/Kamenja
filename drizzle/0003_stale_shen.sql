@@ -1,0 +1,2 @@
+ALTER TABLE "import_batches" ADD COLUMN "categories_auto_assigned" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "import_batches" ADD COLUMN "categories_low_confidence" integer DEFAULT 0 NOT NULL;

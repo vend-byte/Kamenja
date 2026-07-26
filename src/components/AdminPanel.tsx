@@ -22,6 +22,7 @@ import {
   savePromotionAction, deletePromotionAction
 } from '@/app/admin/actions';
 import ProductManager from './ProductManager';
+import BulkImportManager from './BulkImportManager';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Category { id: number; name: string; slug: string; description: string | null; image: string | null; isActive: boolean; }
@@ -206,6 +207,7 @@ export default function AdminPanel({
     { id: 'products', label: 'Products', icon: <ShoppingBag className="w-4 h-4" />, badge: prods.length },
     { id: 'categories', label: 'Categories', icon: <Tags className="w-4 h-4" />, badge: cats.length },
     { id: 'inventory', label: 'Inventory', icon: <Package className="w-4 h-4" />, badge: stats.low + stats.out },
+    { id: 'import', label: 'Bulk Product Import', icon: <Upload className="w-4 h-4" /> },
     { id: 'orders', label: 'Orders', icon: <ShoppingCart className="w-4 h-4" />, badge: orders.filter(o=>o.status==='Pending').length },
     { id: 'customers', label: 'Customers', icon: <Users className="w-4 h-4" />, badge: customers.length },
     { id: 'suppliers', label: 'Suppliers', icon: <Building2 className="w-4 h-4" />, badge: suppliers.length },
@@ -744,6 +746,9 @@ export default function AdminPanel({
               </div>
             </div>
           )}
+
+          {/* ════ BULK PRODUCT IMPORT ════ */}
+          {tab === 'import' && <BulkImportManager />}
 
           {/* ════ PROMOTIONS ════ */}
           {tab === 'promotions' && (

@@ -72,7 +72,6 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
         code: p.code,
         name: p.name,
         wholesalePrice: p.wholesalePrice,
-        qtyPerCarton: p.qtyPerCarton,
         images: p.images,
         stockStatus: p.stockStatus,
       },
@@ -158,13 +157,10 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
             {/* ── CONTENT ── */}
             <div className="flex flex-col flex-1 p-4 gap-3">
 
-              {/* Code + Carton info */}
+              {/* Code */}
               <div className="flex items-center justify-between gap-1">
                 <span className="text-[10px] font-mono font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase tracking-wider">
                   {p.code}
-                </span>
-                <span className="text-[10px] font-semibold text-secondary bg-orange-50 border border-orange-100 px-2 py-0.5 rounded whitespace-nowrap">
-                  {p.qtyPerCarton} Pcs / Ctn
                 </span>
               </div>
 

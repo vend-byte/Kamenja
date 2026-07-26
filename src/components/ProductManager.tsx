@@ -196,7 +196,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  // ─── Live Calculations on Form ───
+  // ─── Live Calculations on Form (per piece — carton is informational only) ───
   const calcs = useMemo(() => {
     const bp = Number(current.buyingPrice) || 0;
     const sp = Number(current.wholesalePrice) || 0;
@@ -204,17 +204,12 @@ export default function ProductManager({ initialProducts, categories }: Props) {
     const transport = Number(current.transportCost) || 0;
     const importC = Number(current.importCost) || 0;
     const other = Number(current.otherExpenses) || 0;
-    const qty = Number(current.qtyPerCarton) || 1;
     const totalCost = bp + transport + importC + other;
     const profit = sp - totalCost;
     const margin = sp > 0 ? (profit / sp) * 100 : 0;
     const discount = dp > 0 && sp > 0 ? ((sp - dp) / sp) * 100 : 0;
     const markup = totalCost > 0 ? (profit / totalCost) * 100 : 0;
-    // ── NEW: carton calculations ──
-    const cartonPrice = sp * qty;
-    const cartonCost = totalCost * qty;
-    const cartonProfit = profit * qty;
-    return { totalCost, profit, margin, discount, markup, cartonPrice, cartonCost, cartonProfit };
+    return { totalCost, profit, margin, discount, markup };
   }, [current]);
 
   // ─── Auto Code Generation ───
@@ -416,12 +411,12 @@ export default function ProductManager({ initialProducts, categories }: Props) {
 
   const handleExportCSV = (data: Product[]) => {
     if (!data.length) return showToast('err', 'No products to export.');
-    const headers = ['Code', 'Barcode', 'Name', 'Brand', 'Category', 'Supplier', 'Buying Price', 'Selling Price', 'Carton Qty', 'Carton Price', 'Stock', 'Status'];
+    const headers = ['Code', 'Barcode', 'Name', 'Brand', 'Category', 'Supplier', 'Buying Price', 'Selling Price', 'Qty Per Carton (Internal)', 'Stock', 'Status'];
     const rows = data.map(p => [
       p.code, p.barcode || '', p.name, p.brand || '',
       categories.find(c => c.id === p.categoryId)?.name || '',
       p.supplier || '', p.buyingPrice, p.wholesalePrice,
-      p.qtyPerCarton, p.wholesalePrice * p.qtyPerCarton,
+      p.qtyPerCarton,
       p.stockQuantity, p.stockStatus
     ]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -452,10 +447,6 @@ export default function ProductManager({ initialProducts, categories }: Props) {
   };
 
   const galleryImages = useMemo(() => { try { const a = JSON.parse(current.images || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }, [current.images]);
-
-  // ── Carton price hint for the Basic section ─────────────────────────────
-  const liveCartonPrice = (Number(current.wholesalePrice) || 0) * (Number(current.qtyPerCarton) || 1);
-  const showCartonHint = (Number(current.wholesalePrice) || 0) > 0 && (Number(current.qtyPerCarton) || 0) > 0;
 
   // ══════════════════════════════════════════════════════════════════════════
   return (
@@ -603,7 +594,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                 <th className="px-3 py-3.5 text-left">Category</th>
                 <th className="px-3 py-3.5 text-left">Supplier</th>
                 <th className="px-3 py-3.5 text-right">Pricing</th>
-                <th className="px-3 py-3.5 text-right">Carton</th>
+                <th className="px-3 py-3.5 text-right">Pcs/Ctn</th>
                 <th className="px-3 py-3.5 text-right">Margin</th>
                 <th className="px-3 py-3.5 text-center">Stock</th>
                 <th className="px-3 py-3.5 text-center">Status</th>
@@ -615,7 +606,6 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                 const cat = categories.find(c => c.id === p.categoryId);
                 const profit = p.wholesalePrice - p.buyingPrice;
                 const margin = p.wholesalePrice > 0 ? (profit / p.wholesalePrice) * 100 : 0;
-                const cartonPrice = p.wholesalePrice * p.qtyPerCarton;
                 const stockCartons = p.qtyPerCarton > 0 ? Math.floor(p.stockQuantity / p.qtyPerCarton) : 0;
                 const isSelected = selected.has(p.id);
                 return (
@@ -641,10 +631,9 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                       <div className="font-bold text-primary">Sell: {fmt(p.wholesalePrice)}</div>
                       {p.discountPrice && p.discountPrice > 0 && <div className="text-[10px] text-red-500 font-bold">Sale: {fmt(p.discountPrice)}</div>}
                     </td>
-                    {/* ── NEW: Carton column ── */}
+                    {/* ── Pcs/Ctn — internal packaging info only, no carton pricing ── */}
                     <td className="px-3 py-3 text-right">
-                      <div className="font-bold text-blue-700 text-[11px]">{fmt(cartonPrice)}</div>
-                      <div className="text-[10px] text-gray-400">{p.qtyPerCarton} pcs/ctn</div>
+                      <div className="text-[10px] text-gray-500">{p.qtyPerCarton} pcs/ctn</div>
                     </td>
                     <td className="px-3 py-3 text-right">
                       <div className={`font-black ${margin >= 20 ? 'text-green-600' : margin >= 0 ? 'text-orange-500' : 'text-red-600'}`}>{margin.toFixed(1)}%</div>
@@ -804,21 +793,8 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                           onChange={e => setCurrent(p => ({ ...p, qtyPerCarton: Number(e.target.value) }))}
                           className="w-full p-2.5 border-2 border-gray-200 rounded-lg outline-none focus:border-primary bg-white"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">How many individual pieces fit in one full carton.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">How many individual pieces fit in one full carton. Internal packaging reference only — not used for pricing.</p>
                       </div>
-
-                      {/* ── LIVE CARTON PRICE HINT ── */}
-                      {showCartonHint && (
-                        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
-                          <div className="flex items-center gap-2 text-blue-700 text-xs">
-                            <span>💡</span>
-                            <span>
-                              Carton price = {fmt(Number(current.wholesalePrice))} × {Number(current.qtyPerCarton)} pcs =
-                            </span>
-                          </div>
-                          <span className="font-black text-blue-800 text-sm">{fmt(liveCartonPrice)}</span>
-                        </div>
-                      )}
 
                       {/* ── STOCK (quick entry in basic) ── */}
                       <div>
@@ -934,25 +910,16 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                       </div>
                     </div>
 
-                    {/* ── LIVE PROFIT CALCULATIONS — now includes carton ── */}
+                    {/* ── LIVE PROFIT CALCULATIONS — per piece only ── */}
                     <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-xl p-5">
                       <h4 className="font-black text-green-700 uppercase tracking-wider text-[11px] mb-3 flex items-center gap-2"><TrendingUp className="w-3.5 h-3.5" /> Live Profit Calculations</h4>
 
-                      {/* Per-piece row */}
                       <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Per Piece</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Total Cost</p><p className="text-base font-black text-orange-600">{fmt(calcs.totalCost)}</p></div>
                         <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Profit / Piece</p><p className={`text-base font-black ${calcs.profit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmt(calcs.profit)}</p></div>
                         <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Margin</p><p className={`text-base font-black ${calcs.margin >= 20 ? 'text-green-700' : 'text-orange-500'}`}>{calcs.margin.toFixed(1)}%</p></div>
                         <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Markup</p><p className="text-base font-black text-blue-600">{calcs.markup.toFixed(1)}%</p></div>
-                      </div>
-
-                      {/* Per-carton row — NEW */}
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Per Carton ({Number(current.qtyPerCarton) || 1} pcs)</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white rounded-lg p-3 border border-blue-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Carton Cost</p><p className="text-base font-black text-orange-600">{fmt(calcs.cartonCost)}</p></div>
-                        <div className="bg-white rounded-lg p-3 border border-blue-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Carton Sell Price</p><p className="text-base font-black text-blue-700">{fmt(calcs.cartonPrice)}</p></div>
-                        <div className="bg-white rounded-lg p-3 border border-blue-200"><p className="text-[9px] text-gray-500 font-bold uppercase">Carton Profit</p><p className={`text-base font-black ${calcs.cartonProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmt(calcs.cartonProfit)}</p></div>
                       </div>
                     </div>
                   </div>

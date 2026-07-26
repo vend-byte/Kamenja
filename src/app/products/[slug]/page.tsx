@@ -11,6 +11,7 @@ import {
   ShieldCheck, 
 } from 'lucide-react';
 import DetailClientActions from '@/components/DetailClientActions';
+import ProductGallery from '@/components/ProductGallery';
 import ProductImage from '@/components/ProductImage';
 
 interface PageProps {
@@ -31,7 +32,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       categoryId: products.categoryId,
       description: products.description,
       wholesalePrice: products.wholesalePrice,
-      qtyPerCarton: products.qtyPerCarton,
+      brand: products.brand,
       specifications: products.specifications,
       stockStatus: products.stockStatus,
       stockQuantity: products.stockQuantity,
@@ -61,7 +62,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
         name: products.name,
         slug: products.slug,
         wholesalePrice: products.wholesalePrice,
-        qtyPerCarton: products.qtyPerCarton,
         stockStatus: products.stockStatus,
         images: products.images,
         description: products.description
@@ -157,46 +157,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
           
           {/* Left Panel: Images */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden aspect-video relative">
-              <ProductImage
-                src={parsedImages[0]}
-                alt={p.name}
-                className="w-full h-full object-cover"
-                fallback={FALLBACK}
-              />
-              <span className={`absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded shadow text-white ${
-                p.stockStatus === 'In Stock' 
-                  ? 'bg-green-600' 
-                  : p.stockStatus === 'Low Stock' 
-                    ? 'bg-yellow-600' 
-                    : 'bg-red-600'
-              }`}>
-                {p.stockStatus}
-              </span>
-            </div>
+            <ProductGallery images={parsedImages} name={p.name} fallback={FALLBACK} stockStatus={p.stockStatus} />
 
-            {parsedImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {parsedImages.map((imgUrl, i) => (
-                  <div key={i} className="aspect-square bg-gray-50 border border-gray-200 rounded overflow-hidden">
-                    <ProductImage
-                      src={imgUrl}
-                      alt={`${p.name} view ${i}`}
-                      className="w-full h-full object-cover"
-                      fallback={FALLBACK}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            
             <div className="bg-gray-50 p-4 rounded border border-gray-150 text-xs space-y-2">
               <h4 className="font-extrabold text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-secondary" />
                 <span>KAMENJA Wholesaler Guarantees</span>
               </h4>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-gray-600 font-medium">
-                <li className="flex items-center gap-1.5">• Packaged in Original Brand Cartons</li>
+                <li className="flex items-center gap-1.5">• Genuine Brand-Sourced Products</li>
                 <li className="flex items-center gap-1.5">• Sealed Protective Sourcing</li>
                 <li className="flex items-center gap-1.5">• Direct Meru Store Pickups Enabled</li>
                 <li className="flex items-center gap-1.5">• Transit Breakage Refunds Covered</li>
@@ -215,25 +184,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 <span>Product Code: <strong className="text-secondary font-mono font-bold">{p.code}</strong></span>
                 <span>|</span>
                 <span>Category: <strong className="text-primary font-bold">{p.categoryName || 'General'}</strong></span>
+                {p.brand && (
+                  <>
+                    <span>|</span>
+                    <span>Brand: <strong className="text-primary font-bold">{p.brand}</strong></span>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Wholesale Price</span>
-                  <span className="text-3xl font-black text-primary">{formatPrice(p.wholesalePrice)}</span>
-                  <span className="text-xs text-gray-400 font-medium"> per Piece</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Carton Packaging</span>
-                  <span className="text-2xl font-black text-secondary">{p.qtyPerCarton} Pieces</span>
-                  <span className="text-xs text-gray-400 font-medium block">in 1 complete Box</span>
-                </div>
-              </div>
-              <p className="text-[11px] text-gray-500 font-medium mt-3 pt-3 border-t border-primary/10">
-                Price for a full carton depends on quantity × price per piece.
-              </p>
+              <span className="text-xs text-gray-500 font-bold block uppercase tracking-wider">Selling Price</span>
+              <span className="text-3xl font-black text-primary">{formatPrice(p.wholesalePrice)}</span>
+              <span className="text-xs text-gray-400 font-medium"> per piece</span>
             </div>
 
             <div className="space-y-2">
@@ -300,11 +263,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 return (
                   <div key={item.id} className="bg-gray-50 border border-gray-200 rounded p-3 flex flex-col justify-between hover:shadow transition-shadow">
                     <div>
-                      <div className="aspect-video bg-white overflow-hidden rounded border border-gray-100 mb-2">
+                      <div className="aspect-square bg-white overflow-hidden rounded border border-gray-100 mb-2 flex items-center justify-center p-2">
                         <ProductImage
                           src={imgUrl}
                           alt={item.name}
-                          className="w-full h-full object-cover"
+                          className="max-w-full max-h-full w-auto h-auto object-contain"
                           fallback="/placeholder.svg"
                         />
                       </div>
@@ -313,7 +276,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
                         <Link href={`/products/${item.slug}`}>{item.name}</Link>
                       </h4>
                       <p className="text-xs text-primary font-black mt-1">{formatPrice(item.wholesalePrice)}</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">{item.qtyPerCarton} Pcs per Carton</p>
                     </div>
                     <Link
                       href={`/products/${item.slug}`}

@@ -243,7 +243,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
               <div className="p-3 bg-secondary/10 border border-secondary/15 rounded-lg text-xs space-y-2 pt-3 border-t border-gray-200">
                 <p className="font-bold text-primary text-[11px]">Need bulk pricing?</p>
                 <p className="text-[10px] text-gray-600 leading-relaxed">
-                  Order 10+ cartons and get exclusive volume discounts.
+                  Order in bulk quantities and get exclusive volume discounts.
                 </p>
                 <a
                   href="https://wa.me/254708952210?text=Hello%20Kamenja%20Enterprises,%20I%20need%20bulk%20pricing."

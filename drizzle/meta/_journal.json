@@ -8,6 +8,27 @@
       "when": 1782571393377,
       "tag": "0000_free_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784995074657,
+      "tag": "0001_windy_zeigeist",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785014204509,
+      "tag": "0002_hard_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785049204020,
+      "tag": "0003_stale_shen",
+      "breakpoints": true
     }
   ]
 }

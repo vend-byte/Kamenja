@@ -236,6 +236,68 @@ export const activityLogs = pgTable('activity_logs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const importBatches = pgTable('import_batches', {
+  id: serial('id').primaryKey(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileType: varchar('file_type', { length: 20 }).notNull(), // 'xlsx' | 'csv' | 'zip'
+  // mapping -> analyzed -> pricing -> ready -> importing -> completed -> failed
+  status: varchar('status', { length: 30 }).notNull().default('mapping'),
+  rawColumns: text('raw_columns').notNull().default('[]'),
+  columnMapping: text('column_mapping').notNull().default('{}'),
+  pricingRule: text('pricing_rule').notNull().default('{}'),
+
+  totalRows: integer('total_rows').notNull().default(0),
+  readyRows: integer('ready_rows').notNull().default(0),
+  duplicateRows: integer('duplicate_rows').notNull().default(0),
+  invalidRows: integer('invalid_rows').notNull().default(0),
+  imagesFound: integer('images_found').notNull().default(0),
+  imagesMissing: integer('images_missing').notNull().default(0),
+  embeddedImagesFound: integer('embedded_images_found').notNull().default(0),
+  filenameImagesFound: integer('filename_images_found').notNull().default(0),
+  urlImagesFound: integer('url_images_found').notNull().default(0),
+  categoriesAutoAssigned: integer('categories_auto_assigned').notNull().default(0),
+  categoriesLowConfidence: integer('categories_low_confidence').notNull().default(0),
+  mappingHighConfidence: boolean('mapping_high_confidence').notNull().default(false),
+
+  processedRows: integer('processed_rows').notNull().default(0),
+  importedRows: integer('imported_rows').notNull().default(0),
+  updatedRows: integer('updated_rows').notNull().default(0),
+  skippedRows: integer('skipped_rows').notNull().default(0),
+  failedRows: integer('failed_rows').notNull().default(0),
+
+  brandsFound: text('brands_found').notNull().default('[]'),
+  categoriesFound: text('categories_found').notNull().default('[]'),
+
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+});
+
+export const importBatchItems = pgTable('import_batch_items', {
+  id: serial('id').primaryKey(),
+  batchId: integer('batch_id').notNull().references(() => importBatches.id, { onDelete: 'cascade' }),
+  rowIndex: integer('row_index').notNull(),
+
+  rawData: text('raw_data').notNull().default('{}'),
+  mappedData: text('mapped_data').notNull().default('{}'),
+
+  imageFilenames: text('image_filenames').notNull().default('[]'),
+  matchedImages: text('matched_images').notNull().default('[]'),
+  missingImages: text('missing_images').notNull().default('[]'),
+
+  buyingPrice: real('buying_price').notNull().default(0),
+  sellingPrice: real('selling_price').notNull().default(0),
+  sellingPriceOverridden: boolean('selling_price_overridden').notNull().default(false),
+
+  // pending -> ready -> imported/updated/skipped/failed ; duplicate/invalid are terminal-preview states
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  isDuplicate: boolean('is_duplicate').notNull().default(false),
+  errors: text('errors'),
+  warnings: text('warnings'),
+  productId: integer('product_id'),
+
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const promotions = pgTable('promotions', {
   id: serial('id').primaryKey(),
   code: varchar('code', { length: 50 }).notNull().unique(),

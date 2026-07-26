@@ -159,7 +159,7 @@ export default async function HomePage() {
                   </span>
                   <div>
                     <h4 className="text-xs font-bold text-primary">Browse & Add to Quote</h4>
-                    <p className="text-[11px] text-gray-500">Select any locks, tools, abrasives, or appliances, specify carton quantities, and click 'Add to Quote'.</p>
+                    <p className="text-[11px] text-gray-500">Select any locks, tools, abrasives, or appliances, specify piece quantities, and click 'Add to Quote'.</p>
                   </div>
                 </div>
 
@@ -200,7 +200,7 @@ export default async function HomePage() {
             <div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-primary">Browse by Category</h2>
               <p className="text-xs sm:text-sm text-gray-600 mt-1 max-w-xl">
-                Click any category to view all available wholesale products, pricing, and carton details.
+                Click any category to view all available wholesale products and pricing.
               </p>
             </div>
             <Link
@@ -260,7 +260,7 @@ export default async function HomePage() {
             <div className="space-y-1">
               <h3 className="font-bold text-primary text-sm uppercase tracking-wider">Flexible Volume Discounts</h3>
               <p className="text-xs text-gray-600 leading-relaxed">
-                The larger your order size in cartons, the bigger the percentage discount we apply on your final quote. Ideal for high-turnover traders.
+                The larger your order size, the bigger the percentage discount we apply on your final quote. Ideal for high-turnover traders.
               </p>
             </div>
           </div>
@@ -342,7 +342,7 @@ export default async function HomePage() {
                 <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" /> Flexible Payments
               </li>
               <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" /> Multi-carton discounts
+                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" /> Bulk order discounts
               </li>
             </ul>
           </div>

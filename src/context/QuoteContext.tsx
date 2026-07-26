@@ -7,9 +7,7 @@ export interface QuoteItem {
   code: string;
   name: string;
   wholesalePrice: number;   // price per single piece
-  qtyPerCarton: number;     // pieces in one carton
-  quantity: number;         // number of units selected, in whatever orderType is set
-  orderType: 'piece' | 'carton'; // NEW — what the quantity above refers to
+  quantity: number;         // number of pieces selected
   image: string;
   stockStatus: string;
 }
@@ -21,12 +19,11 @@ interface QuoteContextType {
     code: string;
     name: string;
     wholesalePrice: number;
-    qtyPerCarton: number;
     images: string; // JSON array of string
     stockStatus: string;
-  }, quantity?: number, orderType?: 'piece' | 'carton') => void;
-  removeItem: (productId: number, orderType: 'piece' | 'carton') => void;
-  updateQuantity: (productId: number, orderType: 'piece' | 'carton', quantity: number) => void;
+  }, quantity?: number) => void;
+  removeItem: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
   clearQuoteList: () => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -45,9 +42,18 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem('kamenja_quote_list');
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Backfill orderType for any items saved before this change existed
+        // Everything is sold per piece now — collapse any old carton-based line items
+        // (from before this change) into plain piece quantities so nothing is lost.
         const migrated = Array.isArray(parsed)
-          ? parsed.map((it: any) => ({ orderType: 'carton', ...it }))
+          ? parsed.map((it: any) => ({
+              id: it.id,
+              code: it.code,
+              name: it.name,
+              wholesalePrice: it.wholesalePrice,
+              quantity: it.orderType === 'carton' ? it.quantity * (it.qtyPerCarton || 1) : it.quantity,
+              image: it.image,
+              stockStatus: it.stockStatus,
+            }))
           : [];
         setItems(migrated);
       }
@@ -70,16 +76,13 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
       code: string;
       name: string;
       wholesalePrice: number;
-      qtyPerCarton: number;
       images: string;
       stockStatus: string;
     },
-    quantity: number = 1,
-    orderType: 'piece' | 'carton' = 'carton'
+    quantity: number = 1
   ) => {
     setItems((prev) => {
-      // Same product ordered as pieces AND cartons are kept as separate line items
-      const existing = prev.find((item) => item.id === product.id && item.orderType === orderType);
+      const existing = prev.find((item) => item.id === product.id);
       let imageUrl = '/placeholder.svg';
       try {
         const parsed = JSON.parse(product.images);
@@ -94,7 +97,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id && item.orderType === orderType
+          item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -106,9 +109,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
             code: product.code,
             name: product.name,
             wholesalePrice: product.wholesalePrice,
-            qtyPerCarton: product.qtyPerCarton,
             quantity: quantity,
-            orderType,
             image: imageUrl,
             stockStatus: product.stockStatus
           }
@@ -119,18 +120,18 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
     setIsOpen(true);
   };
 
-  const removeItem = (productId: number, orderType: 'piece' | 'carton') => {
-    setItems((prev) => prev.filter((item) => !(item.id === productId && item.orderType === orderType)));
+  const removeItem = (productId: number) => {
+    setItems((prev) => prev.filter((item) => item.id !== productId));
   };
 
-  const updateQuantity = (productId: number, orderType: 'piece' | 'carton', quantity: number) => {
+  const updateQuantity = (productId: number, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId, orderType);
+      removeItem(productId);
       return;
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.id === productId && item.orderType === orderType ? { ...item, quantity } : item
+        item.id === productId ? { ...item, quantity } : item
       )
     );
   };

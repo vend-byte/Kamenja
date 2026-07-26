@@ -13,6 +13,7 @@
     "db:seed": "tsx src/db/seedData.ts"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "dotenv": "17.3.1",
@@ -24,10 +25,12 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "recharts": "^3.9.0",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.17",
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "22.19.15",
     "@types/pg": "8.18.0",
     "@types/react": "19.2.14",
