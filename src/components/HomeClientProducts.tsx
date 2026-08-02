@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useQuote } from '@/context/QuoteContext';
-import { Eye, ShoppingBag, MessageSquare, CheckCircle2, Plus } from 'lucide-react';
+import { Eye } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -33,11 +32,6 @@ interface HomeClientProductsProps {
 }
 
 export default function HomeClientProducts({ products, settings }: HomeClientProductsProps) {
-  const { addItem, items, setIsOpen } = useQuote();
-
-  // Track which product just triggered the "added" flash animation
-  const [justAdded, setJustAdded] = useState<number | null>(null);
-
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(price);
 
@@ -65,29 +59,10 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
     return s;
   };
 
-  const handleAddToQuote = (p: Product) => {
-    addItem(
-      {
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        wholesalePrice: p.wholesalePrice,
-        images: p.images,
-        stockStatus: p.stockStatus,
-      },
-      1
-    );
-    setJustAdded(p.id);
-    setTimeout(() => setJustAdded(null), 2000);
-  };
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
       {products.map((p) => {
-        const inList   = items.some((i) => i.id === p.id);
-        const addedQty = items.find((i) => i.id === p.id)?.quantity ?? 0;
-        const flashing = justAdded === p.id;
-        const img      = parseImg(p.images);
+        const img = parseImg(p.images);
 
         const priceDisplay = p.isOnOffer && p.discountPrice
           ? { show: p.discountPrice, was: p.wholesalePrice }
@@ -194,7 +169,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
               </div>
 
               {/* ══════════════════════════════════════════
-                  THREE ACTION BUTTONS
+                  TWO ACTION BUTTONS
                   ══════════════════════════════════════════ */}
               <div className="flex flex-col gap-2 pt-1">
 
@@ -207,36 +182,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
                   <span>View Details</span>
                 </Link>
 
-                {/* Row 2: Request Quote (full-width, orange) */}
-                <button
-                  onClick={() => handleAddToQuote(p)}
-                  className={`w-full flex items-center justify-center gap-2 font-bold py-2 rounded-lg text-xs transition-all cursor-pointer border-2 ${
-                    flashing
-                      ? 'bg-green-600 border-green-600 text-white scale-95'
-                      : inList
-                      ? 'bg-primary border-primary text-white hover:bg-blue-800 hover:border-blue-800'
-                      : 'bg-secondary border-secondary text-white hover:bg-orange-600 hover:border-orange-600'
-                  }`}
-                >
-                  {flashing ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Added to Quote!</span>
-                    </>
-                  ) : inList ? (
-                    <>
-                      <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Add More ({addedQty} in list)</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Request Quote</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Row 3: WhatsApp Inquiry (full-width, green) */}
+                {/* Row 2: WhatsApp Inquiry (full-width, green) */}
                 <a
                   href={buildWhatsAppLink(p)}
                   target="_blank"

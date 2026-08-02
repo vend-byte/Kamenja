@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuote } from '@/context/QuoteContext';
-import { ShoppingBag, CheckCircle2, Plus, Minus, Eye } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -23,14 +22,7 @@ interface DetailClientActionsProps {
 }
 
 export default function DetailClientActions({ product, settings }: DetailClientActionsProps) {
-  const { addItem, items, setIsOpen } = useQuote();
-
-  const [qty, setQty]             = useState(1);
-  const [justAdded, setJustAdded] = useState(false);
-
-  const matchingItem = items.find((i) => i.id === product.id);
-  const inList     = Boolean(matchingItem);
-  const currentQty = matchingItem?.quantity ?? 0;
+  const [qty, setQty] = useState(1);
 
   const formatPrice = (n: number) =>
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n);
@@ -56,23 +48,6 @@ export default function DetailClientActions({ product, settings }: DetailClientA
     `Please provide the price and availability.`;
 
   /* ── Handlers ──────────────────────────────────────────────────── */
-  const handleAdd = () => {
-    addItem(
-      {
-        id: product.id,
-        code: product.code,
-        name: product.name,
-        wholesalePrice: product.wholesalePrice,
-        images: product.images,
-        stockStatus: product.stockStatus,
-      },
-      qty
-    );
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 2200);
-    setIsOpen(true);
-  };
-
   const decrement = () => setQty((v) => Math.max(1, v - 1));
   const increment = () => setQty((v) => v + 1);
 
@@ -90,17 +65,23 @@ export default function DetailClientActions({ product, settings }: DetailClientA
           {/* Stepper */}
           <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
             <button type="button" onClick={decrement}
-              className="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors cursor-pointer border-r border-gray-200">
-              <Minus className="w-3.5 h-3.5" />
+              className="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-gray-600 font-bold text-lg transition-colors cursor-pointer border-r border-gray-200 touch-manipulation"
+              aria-label="Decrease quantity">
+              <Minus className="w-4 h-4" />
             </button>
             <input
-              type="number" min="1" value={qty}
-              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-12 text-center text-sm font-black text-primary bg-white outline-none border-none py-1.5"
+              type="text" inputMode="numeric" pattern="[0-9]*" value={qty}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/[^0-9]/g, '');
+                setQty(digits ? Math.max(1, parseInt(digits, 10)) : 1);
+              }}
+              className="w-14 text-center text-base font-black text-primary bg-white outline-none border-none py-2 touch-manipulation"
+              style={{ fontSize: '16px' }}
             />
             <button type="button" onClick={increment}
-              className="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors cursor-pointer border-l border-gray-200">
-              <Plus className="w-3.5 h-3.5" />
+              className="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-gray-600 font-bold text-lg transition-colors cursor-pointer border-l border-gray-200 touch-manipulation"
+              aria-label="Increase quantity">
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -123,41 +104,11 @@ export default function DetailClientActions({ product, settings }: DetailClientA
       </div>
 
       {/* ══════════════════════════════════════════════
-          THREE ACTION BUTTONS — matching card layout
+          TWO ACTION BUTTONS
           ══════════════════════════════════════════════ */}
       <div className="flex flex-col gap-2.5">
 
-        {/* 1. Request Quote  ← primary CTA */}
-        <button
-          type="button"
-          onClick={handleAdd}
-          className={`w-full flex items-center justify-center gap-2.5 font-bold py-3.5 rounded-xl text-sm transition-all cursor-pointer border-2 ${
-            justAdded
-              ? 'bg-green-600 border-green-600 text-white scale-[0.98]'
-              : inList
-              ? 'bg-primary border-primary text-white hover:bg-blue-800 hover:border-blue-800'
-              : 'bg-secondary border-secondary text-white hover:bg-orange-600 hover:border-orange-600'
-          }`}
-        >
-          {justAdded ? (
-            <>
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              <span>Added {qty} Pc{qty > 1 ? 's' : ''} to Quote List!</span>
-            </>
-          ) : inList ? (
-            <>
-              <Plus className="w-5 h-5 flex-shrink-0" />
-              <span>Add {qty} More Pc{qty > 1 ? 's' : ''} ({currentQty} already in list)</span>
-            </>
-          ) : (
-            <>
-              <ShoppingBag className="w-5 h-5 flex-shrink-0" />
-              <span>Request Quote — {qty} Piece{qty > 1 ? 's' : ''}</span>
-            </>
-          )}
-        </button>
-
-        {/* 2. WhatsApp Inquiry ← green */}
+        {/* 1. WhatsApp Inquiry ← green, primary CTA */}
         <a
           href={buildWaUrl(settings.phone_primary, inquiryMsg)}
           target="_blank"
@@ -170,7 +121,7 @@ export default function DetailClientActions({ product, settings }: DetailClientA
           <span>WhatsApp Inquiry</span>
         </a>
 
-        {/* 3. Secondary WhatsApp with quantity pre-filled */}
+        {/* 2. Secondary WhatsApp with quantity pre-filled */}
         <a
           href={buildWaUrl(settings.phone_secondary, orderMsg)}
           target="_blank"
@@ -184,22 +135,6 @@ export default function DetailClientActions({ product, settings }: DetailClientA
         </a>
 
       </div>
-
-      {/* ── Already-in-list confirmation strip ── */}
-      {inList && !justAdded && (
-        <div className="flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2.5 text-xs text-primary font-semibold">
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <span>
-            This product is in your Quote List — <strong>{currentQty} piece{currentQty > 1 ? 's' : ''}</strong> selected.
-          </span>
-          <button
-            onClick={() => setIsOpen(true)}
-            className="ml-auto text-secondary font-black hover:underline text-[11px] cursor-pointer whitespace-nowrap"
-          >
-            View List →
-          </button>
-        </div>
-      )}
 
       {/* ── Small disclaimer ── */}
       <p className="text-[10px] text-gray-400 text-center leading-relaxed">

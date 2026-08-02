@@ -6,10 +6,9 @@ import { getSettings } from "@/db/settings";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 
-import { QuoteProvider } from "@/context/QuoteContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import QuoteDrawer from "@/components/QuoteDrawer";
+import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 
 const fallbackSettings = {
   business_name: "KAMENJA ENTERPRISES",
@@ -80,23 +79,21 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans text-gray-800 bg-white min-h-screen flex flex-col antialiased">
-        <QuoteProvider>
-          <Header
-            categories={catsList}
-            settings={settingsData}
-          />
+        <Header
+          categories={catsList}
+          settings={settingsData}
+        />
 
-          <main className="flex-1">
-            {children}
-          </main>
+        <main className="flex-1">
+          {children}
+        </main>
 
-          <Footer
-            categories={catsList}
-            settings={settingsData}
-          />
+        <Footer
+          categories={catsList}
+          settings={settingsData}
+        />
 
-          <QuoteDrawer />
-        </QuoteProvider>
+        <FloatingWhatsAppButton phone={settingsData.phone_primary} />
       </body>
     </html>
   );

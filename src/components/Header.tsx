@@ -3,15 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useQuote } from '@/context/QuoteContext';
 import {
   Search,
-  FileText,
   Menu,
   X,
   ChevronDown,
   UserCircle2,
-  ShoppingBag,
   Tag
 } from 'lucide-react';
 
@@ -31,8 +28,6 @@ interface HeaderProps {
 export default function Header({ categories, settings }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { items, setIsOpen } = useQuote();
-  const itemsCount = items.reduce((acc: number, item: any) => acc + item.quantity, 0);
 
   // Search state
   const [searchQuery, setSearchQuery]     = useState('');
@@ -156,20 +151,6 @@ export default function Header({ categories, settings }: HeaderProps) {
 
             {/* Mobile icon cluster */}
             <div className="flex items-center gap-1 lg:hidden">
-              {/* Quote list */}
-              <button
-                onClick={() => setIsOpen(true)}
-                className="relative p-2 text-primary hover:bg-gray-100 rounded-full"
-                title="Quote List"
-              >
-                <FileText className="w-5 h-5" />
-                {itemsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-secondary text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full border border-white">
-                    {itemsCount}
-                  </span>
-                )}
-              </button>
-
               {/* Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(v => !v)}
@@ -291,20 +272,6 @@ export default function Header({ categories, settings }: HeaderProps) {
               Contact
             </Link>
 
-            {/* Quote list button */}
-            <button
-              onClick={() => setIsOpen(true)}
-              className="flex items-center gap-1.5 bg-secondary hover:bg-orange-600 text-white px-3.5 py-2 rounded-lg transition-colors relative cursor-pointer flex-shrink-0"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Quotes</span>
-              {itemsCount > 0 && (
-                <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                  {itemsCount}
-                </span>
-              )}
-            </button>
-
           </nav>
         </div>
       </div>
@@ -373,15 +340,6 @@ export default function Header({ categories, settings }: HeaderProps) {
             <UserCircle2 className="w-4 h-4" />
             Admin Dashboard
           </Link>
-
-          {/* Open quote drawer */}
-          <button
-            onClick={() => { setMobileMenuOpen(false); setIsOpen(true); }}
-            className="mt-1 w-full bg-secondary hover:bg-orange-600 text-white font-bold py-3 rounded-lg text-sm flex items-center justify-center gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            Open Quote List{itemsCount > 0 ? ` (${itemsCount})` : ''}
-          </button>
         </div>
       )}
 

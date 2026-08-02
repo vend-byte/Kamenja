@@ -287,7 +287,7 @@ export default async function AboutPage() {
         <section className="bg-gradient-to-r from-primary to-[#0B2C63] text-white p-8 sm:p-10 rounded-lg text-center space-y-5">
           <h3 className="text-xl sm:text-2xl font-extrabold uppercase tracking-wider">Ready to Partner with KAMENJA?</h3>
           <p className="text-sm text-blue-100 max-w-2xl mx-auto leading-relaxed">
-            Join hundreds of successful shop owners, hardware stores, supermarkets, and institutions who trust KAMENJA ENTERPRISES as their wholesale supplier. Browse our catalog of over 10,000 products, build your quote list, and let us supply your business at the best wholesale prices in Kenya.
+            Join hundreds of successful shop owners, hardware stores, supermarkets, and institutions who trust KAMENJA ENTERPRISES as their wholesale supplier. Browse our catalog of over 10,000 products and message us on WhatsApp to let us supply your business at the best wholesale prices in Kenya.
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-2">
             <Link

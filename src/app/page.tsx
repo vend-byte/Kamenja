@@ -146,7 +146,7 @@ export default async function HomePage() {
           {/* Hero Right Banner Card */}
           <div className="lg:col-span-5 bg-white text-gray-800 p-6 sm:p-8 rounded-lg shadow-xl border-t-4 border-secondary flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-extrabold text-primary mb-3">How to Request a Price Quote</h3>
+              <h3 className="text-lg font-extrabold text-primary mb-3">How to Get a Wholesale Price</h3>
               <p className="text-xs text-gray-600 mb-6 leading-relaxed">
                 We make bulk purchases easy for hardware stores, supermarkets, shop owners, and schools across Kenya.
               </p>
@@ -158,8 +158,8 @@ export default async function HomePage() {
                     1
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Browse & Add to Quote</h4>
-                    <p className="text-[11px] text-gray-500">Select any locks, tools, abrasives, or appliances, specify piece quantities, and click 'Add to Quote'.</p>
+                    <h4 className="text-xs font-bold text-primary">Browse Our Products</h4>
+                    <p className="text-[11px] text-gray-500">Select any locks, tools, abrasives, or appliances and check the piece quantities you need.</p>
                   </div>
                 </div>
 
@@ -168,8 +168,8 @@ export default async function HomePage() {
                     2
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Review Selected Quote List</h4>
-                    <p className="text-[11px] text-gray-500">Open your Quote List from the navigation, review your request value, and input your name and phone number.</p>
+                    <h4 className="text-xs font-bold text-primary">Message Us on WhatsApp</h4>
+                    <p className="text-[11px] text-gray-500">Tap the WhatsApp button on any product, or the floating chat icon, and send us your request.</p>
                   </div>
                 </div>
 
@@ -178,8 +178,8 @@ export default async function HomePage() {
                     3
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Submit and Receive Price List</h4>
-                    <p className="text-[11px] text-gray-500">Our sales agents will draft a formal invoice/quotation with bulk discounts and call you instantly.</p>
+                    <h4 className="text-xs font-bold text-primary">Receive Your Price List</h4>
+                    <p className="text-[11px] text-gray-500">Our sales agents will draft a formal invoice/quotation with bulk discounts and reply instantly on WhatsApp.</p>
                   </div>
                 </div>
               </div>
