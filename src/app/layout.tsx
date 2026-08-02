@@ -9,6 +9,8 @@ import { categories } from "@/db/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
+import { CartProvider } from "@/context/CartContext";
+import CartDrawer from "@/components/CartDrawer";
 
 const fallbackSettings = {
   business_name: "KAMENJA ENTERPRISES",
@@ -79,21 +81,24 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans text-gray-800 bg-white min-h-screen flex flex-col antialiased">
-        <Header
-          categories={catsList}
-          settings={settingsData}
-        />
+        <CartProvider>
+          <Header
+            categories={catsList}
+            settings={settingsData}
+          />
 
-        <main className="flex-1">
-          {children}
-        </main>
+          <main className="flex-1">
+            {children}
+          </main>
 
-        <Footer
-          categories={catsList}
-          settings={settingsData}
-        />
+          <Footer
+            categories={catsList}
+            settings={settingsData}
+          />
 
-        <FloatingWhatsAppButton phone={settingsData.phone_primary} />
+          <FloatingWhatsAppButton phone={settingsData.phone_primary} />
+          <CartDrawer settings={settingsData} />
+        </CartProvider>
       </body>
     </html>
   );

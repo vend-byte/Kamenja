@@ -3,13 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useCart } from '@/context/CartContext';
 import {
   Search,
   Menu,
   X,
   ChevronDown,
   UserCircle2,
-  Tag
+  Tag,
+  ShoppingCart
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -28,6 +30,8 @@ interface HeaderProps {
 export default function Header({ categories, settings }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { items, setIsOpen: setCartOpen } = useCart();
+  const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   // Search state
   const [searchQuery, setSearchQuery]     = useState('');
@@ -151,6 +155,21 @@ export default function Header({ categories, settings }: HeaderProps) {
 
             {/* Mobile icon cluster */}
             <div className="flex items-center gap-1 lg:hidden">
+              {/* Cart */}
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative p-2 text-primary hover:bg-gray-100 rounded-full touch-manipulation"
+                aria-label="Open cart"
+                title="Cart"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-secondary text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full border border-white">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+
               {/* Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(v => !v)}
@@ -272,6 +291,20 @@ export default function Header({ categories, settings }: HeaderProps) {
               Contact
             </Link>
 
+            {/* Cart button */}
+            <button
+              onClick={() => setCartOpen(true)}
+              className="flex items-center gap-1.5 bg-secondary hover:bg-orange-600 text-white px-3.5 py-2 rounded-lg transition-colors relative cursor-pointer flex-shrink-0"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>Cart</span>
+              {cartCount > 0 && (
+                <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
           </nav>
         </div>
       </div>
@@ -340,6 +373,15 @@ export default function Header({ categories, settings }: HeaderProps) {
             <UserCircle2 className="w-4 h-4" />
             Admin Dashboard
           </Link>
+
+          {/* Open cart */}
+          <button
+            onClick={() => { setMobileMenuOpen(false); setCartOpen(true); }}
+            className="mt-1 w-full bg-secondary hover:bg-orange-600 text-white font-bold py-3 rounded-lg text-sm flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Open Cart{cartCount > 0 ? ` (${cartCount})` : ''}
+          </button>
         </div>
       )}
 
