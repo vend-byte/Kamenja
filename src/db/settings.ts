@@ -1,7 +1,5 @@
 import { db } from './index';
 import { settings } from './schema';
-import { eq } from 'drizzle-orm';
-import { ensureSeeded } from './seedData';
 
 export interface SiteSettings {
   business_name: string;
@@ -29,45 +27,58 @@ const fallbackSettings: SiteSettings = {
   email: 'lopezbrycen@gmail.com',
   whatsapp_url_1: 'https://wa.me/254708952210',
   whatsapp_url_2: 'https://wa.me/254723456382',
-  about_who_we_are: 'KAMENJA ENTERPRISES is a trusted wholesale supplier dedicated to providing retailers, hardware stores, supermarkets, and businesses with quality products at competitive wholesale prices. We work directly with leading manufacturers and importers to ensure high quality, affordability, and reliable stock availability across Meru and the rest of Kenya.',
-  about_mission: 'To provide reliable, affordable, and quality wholesale products while delivering excellent customer service.',
-  about_vision: 'To become Kenya\'s leading wholesale supplier by offering quality products, competitive pricing, and dependable service.',
+  about_who_we_are:
+    'KAMENJA ENTERPRISES is a trusted wholesale supplier dedicated to providing retailers, hardware stores, supermarkets, and businesses with quality products at competitive wholesale prices.',
+  about_mission:
+    'To provide reliable, affordable, and quality wholesale products while delivering excellent customer service.',
+  about_vision:
+    "To become Kenya's leading wholesale supplier by offering quality products, competitive pricing, and dependable service.",
   hero_heading: 'KAMENJA ENTERPRISES',
   hero_subheading: "Kenya's Trusted Wholesale Supplier",
-  hero_description: 'We supply high-quality wholesale products to retailers, hardware stores, supermarkets, institutions, wholesalers, and distributors across Kenya at highly competitive prices.'
+  hero_description:
+    'We supply high-quality wholesale products to retailers across Kenya.'
 };
 
 export async function getSettings(): Promise<SiteSettings> {
   try {
-    await ensureSeeded();
     const rows = await db.select().from(settings);
+
     const mapped = { ...fallbackSettings };
-    for (const r of rows) {
-      if (r.key in mapped) {
-        (mapped as any)[r.key] = r.value;
+
+    for (const row of rows) {
+      if (row.key in mapped) {
+        (mapped as any)[row.key] = row.value;
       }
     }
+
     return mapped;
-  } catch (err) {
-    console.error('Error fetching settings, using fallbacks:', err);
+  } catch (error) {
+    console.error('Error loading settings:', error);
     return fallbackSettings;
   }
 }
 
-export async function updateSettings(updates: Partial<SiteSettings>): Promise<void> {
+export async function updateSettings(
+  updates: Partial<SiteSettings>
+): Promise<void> {
   try {
-    for (const [k, v] of Object.entries(updates)) {
-      if (v !== undefined) {
-        await db
-          .insert(settings)
-          .values({ key: k, value: v })
-          .onConflictDoUpdate({
-            target: settings.key,
-            set: { value: v }
-          });
-      }
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined) continue;
+
+      await db
+        .insert(settings)
+        .values({
+          key,
+          value,
+        })
+        .onConflictDoUpdate({
+          target: settings.key,
+          set: {
+            value,
+          },
+        });
     }
-  } catch (err) {
-    console.error('Error updating settings:', err);
+  } catch (error) {
+    console.error('Error updating settings:', error);
   }
 }

@@ -52,22 +52,37 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const session = cookieStore.get(adminSessionCookieName)?.value;
-    if (session !== 'authenticated') return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
-
-    const formData = await request.formData();
-    const file = formData.get('file');
-    if (!file || typeof file === 'string') {
-      return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
+    if (session !== 'authenticated') {
+      return NextResponse.json({
+        error: 'Your admin session could not be verified, so the upload was blocked. Try logging out and back in. ' +
+          'If this happens immediately after a fresh login, your admin session cookie likely isn\'t being stored — ' +
+          'this typically means the app is being served without HTTPS while running in production mode.',
+      }, { status: 401 });
     }
 
-    const filename = (file as File).name || 'upload';
+    // The browser sends the catalogue file straight to this route as multipart
+    // form data. We previously routed it through a direct-to-Cloudinary upload
+    // (to avoid Vercel's 4.5MB Function body limit), but Cloudinary's `raw`
+    // resource type doesn't return CORS headers on this account/plan — signed
+    // browser uploads to /raw/upload get blocked by the browser's CORS check
+    // before Cloudinary's response is ever readable, regardless of a valid
+    // signature. Since catalogue files are normally well under 4.5MB, sending
+    // them directly here sidesteps that limitation entirely. (If a genuinely
+    // oversized catalogue ever needs support, chunked upload or a non-raw
+    // Cloudinary resource_type workaround would need to be revisited.)
+    const form = await request.formData().catch(() => null);
+    const file = form?.get('file') as File | null;
+    const filename: string = file?.name || 'upload';
+    if (!file) {
+      return NextResponse.json({ error: 'No file was received.' }, { status: 400 });
+    }
+
     const fileType = detectFileType(filename);
     if (!fileType) {
       return NextResponse.json({ error: 'Unsupported file type. Please upload .xlsx, .csv, or a .zip package.' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     let sheetBuffer: Buffer = buffer;
     let sheetFilename = filename;

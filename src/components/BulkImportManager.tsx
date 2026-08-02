@@ -67,14 +67,46 @@ export default function BulkImportManager() {
   const [showHistory, setShowHistory] = useState(false);
 
   // ── Upload ──────────────────────────────────────────────────────────
+  // Reads a fetch Response defensively: a non-2xx or non-JSON body (e.g. a
+  // platform-level 413 "Request Entity Too Large" plain-text page, or a 502/504
+  // from a proxy) must never be handed to res.json(), which would throw a
+  // confusing "Unexpected token" parse error instead of a useful message.
+  const parseJsonResponse = async (res: Response, context: string) => {
+    const text = await res.text();
+    let data: any = {};
+    if (text) {
+      try { data = JSON.parse(text); }
+      catch {
+        throw new Error(
+          res.status === 413
+            ? 'The file is too large for the server to accept. Try a smaller catalogue, or fewer/lower-resolution embedded images.'
+            : `${context} failed (HTTP ${res.status}). The server returned an unexpected response instead of JSON.`
+        );
+      }
+    }
+    if (!res.ok || data.error) throw new Error(data.error || `${context} failed.`);
+    return data;
+  };
+
   const handleFile = useCallback(async (file: File) => {
     setUploading(true); setUploadError('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/admin/import/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Upload failed.');
+      // Send the catalogue file straight to our own server as multipart form data.
+      // (Previously this went browser -> Cloudinary -> our server, to route around
+      // Vercel's 4.5MB Function body limit — but Cloudinary's `raw` resource type
+      // doesn't return CORS headers on this account, so that direct browser upload
+      // was blocked by the browser's CORS check before it could ever succeed,
+      // regardless of a valid signature. Catalogue files are normally well under
+      // 4.5MB, so sending them here directly avoids that limitation entirely.)
+      const uploadForm = new FormData();
+      uploadForm.append('file', file);
+
+      const res = await fetch('/api/admin/import/upload', {
+        method: 'POST',
+        body: uploadForm,
+      });
+      const data = await parseJsonResponse(res, 'Analyzing catalogue');
+
       setAnalysis(data);
       setMapping(data.mapping);
       const initialCatMargins: Record<string, number> = {};

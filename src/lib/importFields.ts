@@ -27,5 +27,6 @@ export const REQUIRED_FIELDS: CanonicalField[] = ['name', 'buyingPrice'];
 
 export function slugify(text: string): string {
   return text.toString().toLowerCase().trim()
-    .replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-');
+    .replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }

@@ -6,6 +6,7 @@ import { eq, and, asc, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { calculateSellingPrice, PricingRule } from '@/lib/pricingEngine';
 import { slugify, CanonicalField } from '@/lib/importFields';
+import { generateProductSeo } from '@/lib/seo';
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────
 
@@ -244,6 +245,13 @@ export async function runImportChunkAction(batchId: number, duplicateStrategy: '
         let stockStatus = 'In Stock';
         if (stockQuantity <= 0) stockStatus = 'Out of Stock'; else if (stockQuantity <= 5) stockStatus = 'Low Stock';
 
+        // ── Automatic SEO (slug already generated above; title + description here) ──
+        // Runs for every row, no manual entry required — this is what makes bulk-imported
+        // products immediately indexable with clean, optimized metadata.
+        const { metaTitle, metaDescription } = generateProductSeo({
+          name, description: mapped.description, category: catName, brand: mapped.brand,
+        });
+
         const payload = {
           code, sku: sku || null, name, slug, categoryId,
           subcategory: mapped.subcategory || null,
@@ -251,6 +259,7 @@ export async function runImportChunkAction(batchId: number, duplicateStrategy: '
           supplier: mapped.supplier || null, countryOfOrigin: mapped.countryOfOrigin || null,
           warranty: mapped.warranty || null,
           description: mapped.description || null,
+          metaTitle, metaDescription,
           buyingPrice: Math.round(item.buyingPrice),
           wholesalePrice: Math.round(item.sellingPrice),
           retailPrice: Math.round(item.sellingPrice),

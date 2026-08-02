@@ -22,10 +22,22 @@ export function verifyAdminCredentials(username: string, password: string, store
 
 export function getSessionCookieOptions() {
   const isProduction = process.env.NODE_ENV === 'production';
+  // Browsers silently refuse to store a `Secure` cookie over a plain HTTP connection —
+  // if the app is ever served without HTTPS while NODE_ENV=production (e.g. testing a
+  // production build locally with `next start`, or a not-yet-HTTPS deployment), the
+  // login response would *look* successful client-side while the cookie never actually
+  // gets stored. Every subsequent authenticated request (like bulk import) then fails
+  // immediately with 401, even though the admin UI itself renders normally.
+  // ADMIN_COOKIE_INSECURE=true is an explicit escape hatch for exactly that situation.
+  const forceInsecure = process.env.ADMIN_COOKIE_INSECURE === 'true';
+  const secure = isProduction && !forceInsecure;
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+    secure,
+    // 'none' is only needed for cross-site cookie use, which this app never does
+    // (the admin UI and API always share the same origin). 'lax' works for same-origin
+    // fetch/form submissions and — unlike 'none' — doesn't itself require HTTPS.
+    sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   };

@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { cache } from 'react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { db } from '@/db';
 import { products, categories } from '@/db/schema';
 import { getSettings } from '@/db/settings';
+import { generateMetaTitle, generateMetaDescription } from '@/lib/seo';
 import { eq, and, ne, desc } from 'drizzle-orm';
 import { 
   ArrowLeft, 
@@ -20,10 +22,12 @@ interface PageProps {
   }>;
 }
 
-export default async function ProductDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+const SITE_URL = 'https://kamenjaenterprises.com';
 
-  const productData = await db
+// Deduped between generateMetadata and the page component (React cache() memoizes
+// per-request), so we only hit the database once per request for this product.
+const getProductBySlug = cache(async (slug: string) => {
+  const rows = await db
     .select({
       id: products.id,
       code: products.code,
@@ -31,6 +35,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
       slug: products.slug,
       categoryId: products.categoryId,
       description: products.description,
+      shortDescription: products.shortDescription,
+      metaTitle: products.metaTitle,
+      metaDescription: products.metaDescription,
       wholesalePrice: products.wholesalePrice,
       brand: products.brand,
       specifications: products.specifications,
@@ -39,18 +46,60 @@ export default async function ProductDetailPage({ params }: PageProps) {
       images: products.images,
       features: products.features,
       categoryName: categories.name,
-      categorySlug: categories.slug
+      categorySlug: categories.slug,
     })
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .where(eq(products.slug, slug))
     .limit(1);
 
-  if (productData.length === 0) {
-    notFound();
+  return rows[0] || null;
+});
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const p = await getProductBySlug(slug);
+  if (!p) return { title: 'Product Not Found' };
+
+  // Stored SEO fields win (set automatically on bulk import); fall back to generating
+  // them on the fly for products created before this feature existed or manually
+  // without SEO fields filled in.
+  const title = p.metaTitle || generateMetaTitle({ name: p.name, brand: p.brand, category: p.categoryName });
+  const description = p.metaDescription || generateMetaDescription({
+    name: p.name, description: p.description, shortDescription: p.shortDescription,
+    brand: p.brand, category: p.categoryName,
+  });
+
+  let ogImage: string | undefined;
+  try {
+    const parsed = JSON.parse(p.images || '[]');
+    if (Array.isArray(parsed) && parsed[0]) ogImage = parsed[0];
+  } catch {
+    if (typeof p.images === 'string' && p.images.trim() && !p.images.startsWith('[')) ogImage = p.images;
   }
 
-  const p = productData[0];
+  return {
+    title,
+    description,
+    alternates: { canonical: `${SITE_URL}/products/${slug}` },
+    openGraph: {
+      title, description, url: `${SITE_URL}/products/${slug}`, type: 'website',
+      images: ogImage ? [{ url: ogImage }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image', title, description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+  };
+}
+
+export default async function ProductDetailPage({ params }: PageProps) {
+  const { slug } = await params;
+
+  const p = await getProductBySlug(slug);
+  if (!p) {
+    notFound();
+  }
   const settingsData = await getSettings();
 
   let related: any[] = [];

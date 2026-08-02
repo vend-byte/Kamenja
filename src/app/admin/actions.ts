@@ -5,6 +5,7 @@ import { categories, products, settings, quotes, customers, orders, suppliers, s
 import { eq, desc, asc, sql, like, ilike, and, gte } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { adminSessionCookieName, getSessionCookieOptions } from '@/lib/adminAuth';
 
 function slugify(text: string): string {
   return text.toString().toLowerCase().trim()
@@ -16,9 +17,7 @@ function slugify(text: string): string {
 export async function loginAdminAction(username: string, password: string) {
   if (username === 'admin' && password === 'Kamenja2') {
     const cookieStore = await cookies();
-    cookieStore.set('kamenja_admin_session', 'authenticated', {
-      httpOnly: true, secure: true, sameSite: 'none', maxAge: 60 * 60 * 24 * 7, path: '/'
-    });
+    cookieStore.set(adminSessionCookieName, 'authenticated', getSessionCookieOptions());
     return { success: true };
   }
   return { error: 'Incorrect username or password.' };
@@ -26,9 +25,7 @@ export async function loginAdminAction(username: string, password: string) {
 
 export async function logoutAdminAction() {
   const cookieStore = await cookies();
-  cookieStore.set('kamenja_admin_session', '', {
-    httpOnly: true, secure: true, sameSite: 'none', maxAge: 0, path: '/'
-  });
+  cookieStore.set(adminSessionCookieName, '', { ...getSessionCookieOptions(), maxAge: 0 });
   return { success: true };
 }
 

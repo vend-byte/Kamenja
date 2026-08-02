@@ -36,6 +36,10 @@ export const products = pgTable('products', {
   features: text('features'),
   specifications: text('specifications'),
 
+  // ─── SEO (auto-generated on bulk import, editable in admin) ───
+  metaTitle: varchar('meta_title', { length: 255 }),
+  metaDescription: varchar('meta_description', { length: 500 }),
+
   // ─── Pricing (extended) ───
   buyingPriceRmb: real('buying_price_rmb').notNull().default(0),
   exchangeRate: real('exchange_rate').notNull().default(20),
