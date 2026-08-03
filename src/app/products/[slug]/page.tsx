@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { products, categories } from '@/db/schema';
 import { getSettings } from '@/db/settings';
 import { generateMetaTitle, generateMetaDescription } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/siteUrl';
 import { eq, and, ne, desc } from 'drizzle-orm';
 import { 
   ArrowLeft, 
@@ -22,7 +23,7 @@ interface PageProps {
   }>;
 }
 
-const SITE_URL = 'https://kamenjaenterprises.com';
+const SITE_URL = getSiteUrl();
 
 // Deduped between generateMetadata and the page component (React cache() memoizes
 // per-request), so we only hit the database once per request for this product.
@@ -173,8 +174,61 @@ export default async function ProductDetailPage({ params }: PageProps) {
     return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(price);
   };
 
+  const stockAvailability =
+    p.stockStatus === 'In Stock' ? 'https://schema.org/InStock'
+    : p.stockStatus === 'Low Stock' ? 'https://schema.org/LimitedAvailability'
+    : 'https://schema.org/OutOfStock';
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.name,
+    image: parsedImages,
+    description: p.metaDescription || p.shortDescription || p.description || p.name,
+    sku: p.code,
+    ...(p.brand ? { brand: { '@type': 'Brand', name: p.brand } } : {}),
+    ...(p.categoryName ? { category: p.categoryName } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: `${SITE_URL}/products/${p.slug}`,
+      priceCurrency: 'KES',
+      price: p.wholesalePrice,
+      availability: stockAvailability,
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: { '@type': 'Organization', name: settingsData.business_name },
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Wholesale Catalog', item: `${SITE_URL}/products` },
+      ...(p.categorySlug ? [{
+        '@type': 'ListItem', position: 3, name: p.categoryName,
+        item: `${SITE_URL}/products?category=${p.categorySlug}`,
+      }] : []),
+      {
+        '@type': 'ListItem',
+        position: p.categorySlug ? 4 : 3,
+        name: p.name,
+        item: `${SITE_URL}/products/${p.slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="bg-white min-h-screen py-8 px-4 sm:px-6">
+      {/* Structured data for Google rich results (price, stock, breadcrumbs) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Breadcrumbs */}

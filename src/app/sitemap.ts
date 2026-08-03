@@ -1,11 +1,12 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/db';
 import { products } from '@/db/schema';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://kamenjaenterprises.com';
+  const baseUrl = getSiteUrl();
 
   // Fetch all product slugs for dynamic sitemap routing
   let productUrls: MetadataRoute.Sitemap = [];

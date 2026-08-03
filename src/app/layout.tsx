@@ -5,6 +5,7 @@ import "./globals.css";
 import { getSettings } from "@/db/settings";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -34,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: `${settings.business_name} - ${settings.hero_subheading}`,
       description: settings.hero_description,
-      metadataBase: new URL("https://kamenjaenterprises.com"),
+      metadataBase: new URL(getSiteUrl()),
     };
   } catch (error) {
     console.error("Metadata Error:", error);
