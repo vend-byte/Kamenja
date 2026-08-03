@@ -33,10 +33,10 @@ const fallbackSettings: SiteSettings = {
     'To provide reliable, affordable, and quality wholesale products while delivering excellent customer service.',
   about_vision:
     "To become Kenya's leading wholesale supplier by offering quality products, competitive pricing, and dependable service.",
-  hero_heading: 'KAMENJA ENTERPRISES',
-  hero_subheading: "Kenya's Trusted Wholesale Supplier",
+  hero_heading: 'Your One-Stop Online Wholesale Store',
+  hero_subheading: 'Place Your Order Online, We Deliver To You!',
   hero_description:
-    'We supply high-quality wholesale products to retailers across Kenya.'
+    'Shop thousands of wholesale products online and have your order delivered directly to your shop, business or doorstep anywhere in Kenya.'
 };
 
 export async function getSettings(): Promise<SiteSettings> {

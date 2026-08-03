@@ -26,7 +26,12 @@ import {
   Cog,
   Package,
   Box,
-  Briefcase
+  Briefcase,
+  ShieldCheck,
+  Tag,
+  ShoppingCart,
+  PackageCheck,
+  MapPin
 } from 'lucide-react';
 import HomeClientProducts from '@/components/HomeClientProducts';
 
@@ -56,6 +61,21 @@ function getCategoryIcon(slug: string) {
     default:
       return <Box className="w-8 h-8 text-secondary" />;
   }
+}
+
+// Highlights a keyword (e.g. "Online") inside the admin-editable hero heading
+// using the site's existing orange accent color, while leaving the rest of
+// the text exactly as entered in Settings.
+function highlightKeyword(text: string, keyword: string) {
+  const idx = text.toLowerCase().indexOf(keyword.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="text-secondary">{text.slice(idx, idx + keyword.length)}</span>
+      {text.slice(idx + keyword.length)}
+    </>
+  );
 }
 
 export default async function HomePage() {
@@ -92,15 +112,27 @@ export default async function HomePage() {
     <div className="w-full flex flex-col min-h-screen">
       
       {/* 1. HERO SECTION */}
-      <section className="bg-gradient-to-br from-[#0B2C63] to-[#0F3D91] text-white py-16 px-4 sm:px-6 relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <section className="bg-gradient-to-br from-[#0B2C63] to-[#0F3D91] text-white py-16 px-4 sm:px-6 relative overflow-hidden">
+        {/* Decorative delivery-themed background treatment.
+            NOTE: swap this for a real storefront photo whenever you have one —
+            just replace this div with a background <Image> and keep the gradient
+            overlay div below on top of it for text readability. */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -right-16 top-1/2 -translate-y-1/2 opacity-[0.08]">
+            <Truck className="w-[26rem] h-[26rem]" strokeWidth={0.75} />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2C63] via-[#0B2C63]/80 to-transparent" />
+        </div>
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
           {/* Hero Left Content */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-block bg-secondary text-white font-bold text-xs px-3 py-1 rounded uppercase tracking-wider">
-              Meru's Premier Wholesale Hub
+            <div className="inline-flex items-center gap-1.5 bg-secondary text-white font-bold text-xs px-3 py-1 rounded uppercase tracking-wider">
+              <span>🚚</span>
+              <span>Nationwide Delivery Across Kenya</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-none text-white">
-              {settingsData.hero_heading}
+              {highlightKeyword(settingsData.hero_heading, 'Online')}
             </h1>
             <p className="text-lg sm:text-xl font-semibold text-orange-400">
               {settingsData.hero_subheading}
@@ -108,7 +140,27 @@ export default async function HomePage() {
             <p className="text-sm sm:text-base text-blue-100 max-w-2xl leading-relaxed">
               {settingsData.hero_description}
             </p>
-            
+
+            {/* Feature Icons */}
+            <div className="flex flex-wrap gap-x-6 gap-y-3 pt-1">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-100">
+                <Percent className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>Wholesale Prices</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-100">
+                <Truck className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>Fast Nationwide Delivery</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-100">
+                <ShieldCheck className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>Secure Ordering</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-100">
+                <Tag className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>Bulk Discounts</span>
+              </div>
+            </div>
+
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4 pt-2">
               <Link
@@ -118,27 +170,30 @@ export default async function HomePage() {
                 <span>Browse Products</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
-              <Link
-                href="/contact"
-                className="bg-white hover:bg-gray-100 text-primary font-bold text-sm px-6 py-3 rounded shadow transition-colors flex items-center gap-2 cursor-pointer"
+              <a
+                href={`${settingsData.whatsapp_url_1}?text=${encodeURIComponent('Hello Kamenja Enterprises, I would like to place a wholesale order.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm px-6 py-3 rounded shadow transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <span>Contact Sales Office</span>
-              </Link>
+                <MessageSquare className="w-4 h-4" />
+                <span>Order via WhatsApp</span>
+              </a>
             </div>
 
             {/* Quick stats grid */}
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-blue-800 text-center max-w-xl">
               <div>
                 <span className="block text-2xl font-black text-secondary">10,000+</span>
-                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Potential Catalog Items</span>
+                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Products</span>
               </div>
               <div>
-                <span className="block text-2xl font-black text-secondary">100%</span>
-                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Original Sourced Goods</span>
+                <span className="block text-2xl font-black text-secondary">Nationwide</span>
+                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Delivery</span>
               </div>
               <div>
-                <span className="block text-2xl font-black text-secondary">Meru, KE</span>
-                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Central Distribution Hub</span>
+                <span className="block text-2xl font-black text-secondary">Quality</span>
+                <span className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">At Wholesale Prices</span>
               </div>
             </div>
           </div>
@@ -146,9 +201,9 @@ export default async function HomePage() {
           {/* Hero Right Banner Card */}
           <div className="lg:col-span-5 bg-white text-gray-800 p-6 sm:p-8 rounded-lg shadow-xl border-t-4 border-secondary flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-extrabold text-primary mb-3">How to Get a Wholesale Price</h3>
+              <h3 className="text-lg font-extrabold text-primary mb-3">How It Works</h3>
               <p className="text-xs text-gray-600 mb-6 leading-relaxed">
-                We make bulk purchases easy for hardware stores, supermarkets, shop owners, and schools across Kenya.
+                Shop online and we deliver your wholesale order directly to your shop, business or doorstep anywhere in Kenya.
               </p>
               
               {/* Steps */}
@@ -158,8 +213,8 @@ export default async function HomePage() {
                     1
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Browse Our Products</h4>
-                    <p className="text-[11px] text-gray-500">Select any locks, tools, abrasives, or appliances and check the piece quantities you need.</p>
+                    <h4 className="text-xs font-bold text-primary">Browse Products</h4>
+                    <p className="text-[11px] text-gray-500">Choose from our wholesale hardware, household appliances, electricals and more.</p>
                   </div>
                 </div>
 
@@ -168,8 +223,8 @@ export default async function HomePage() {
                     2
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Message Us on WhatsApp</h4>
-                    <p className="text-[11px] text-gray-500">Tap the WhatsApp button on any product, or the floating chat icon, and send us your request.</p>
+                    <h4 className="text-xs font-bold text-primary">Place Your Order</h4>
+                    <p className="text-[11px] text-gray-500">Order online or send your order via WhatsApp.</p>
                   </div>
                 </div>
 
@@ -178,16 +233,43 @@ export default async function HomePage() {
                     3
                   </span>
                   <div>
-                    <h4 className="text-xs font-bold text-primary">Receive Your Price List</h4>
-                    <p className="text-[11px] text-gray-500">Our sales agents will draft a formal invoice/quotation with bulk discounts and reply instantly on WhatsApp.</p>
+                    <h4 className="text-xs font-bold text-primary">We Deliver To You</h4>
+                    <p className="text-[11px] text-gray-500">We deliver directly to your shop, business or doorstep anywhere in Kenya.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-              <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-secondary" /> 0708952210</span>
-              <span className="font-bold text-primary">Fast 2-Hour Feedback</span>
+              <span className="flex items-center gap-1.5 font-bold text-primary">
+                <MapPin className="w-3.5 h-3.5 text-secondary" /> Nationwide Coverage
+              </span>
+              <span className="text-right">We deliver across all counties in Kenya.</span>
+            </div>
+          </div>
+
+          {/* Floating Delivery Process Card */}
+          <div className="lg:col-span-12 flex justify-center pt-4">
+            <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-xl">
+              <div className="flex items-center justify-between sm:justify-center sm:gap-8 px-4 sm:px-8 py-4 text-gray-800">
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <ShoppingCart className="w-6 h-6 text-primary" />
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide">Order Online</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <Package className="w-6 h-6 text-primary" />
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide">We Pack Carefully</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <PackageCheck className="w-6 h-6 text-primary" />
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide">We Deliver Nationwide</span>
+                </div>
+              </div>
+              <div className="bg-secondary text-white text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider py-2">
+                Shop Online • We Deliver To Your Doorstep
+              </div>
             </div>
           </div>
         </div>
