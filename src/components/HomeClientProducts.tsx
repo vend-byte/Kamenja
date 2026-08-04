@@ -169,13 +169,13 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-base font-black text-red-600">{formatPrice(priceDisplay.show)}</span>
                     <span className="text-xs text-gray-400 line-through font-medium">{formatPrice(priceDisplay.was)}</span>
-                    <span className="text-[9px] text-red-500 font-bold bg-red-50 px-1 rounded">/ Ctn</span>
+                    <span className="text-[9px] text-red-500 font-bold bg-red-50 px-1 rounded">/ Pc</span>
                   </div>
                 ) : (
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[10px] text-gray-400 font-semibold">Wholesale</span>
                     <span className="text-base font-black text-primary">{formatPrice(priceDisplay.show)}</span>
-                    <span className="text-[10px] text-gray-400 font-medium">/ Ctn</span>
+                    <span className="text-[10px] text-gray-400 font-medium">/ Pc</span>
                   </div>
                 )}
               </div>
