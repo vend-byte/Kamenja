@@ -727,7 +727,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                       <div className="w-32 h-32 bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center relative flex-shrink-0 overflow-hidden shadow-sm">
                         {(imagePreview || current.featuredImage) ? (
                           <>
-                            <img src={imagePreview || current.featuredImage || '/placeholder.svg'} alt="Product preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }} />
+                            <img src={imagePreview || current.featuredImage || '/placeholder.svg'} alt="Product preview" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }} />
                             <button type="button" onClick={() => { setCurrent(p => ({ ...p, featuredImage: '' })); setImagePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg"><X className="w-3.5 h-3.5" /></button>
                           </>
                         ) : (
@@ -832,7 +832,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                       <h4 className="font-black text-secondary uppercase tracking-wider text-[11px] mb-3 flex items-center gap-2"><Star className="w-3.5 h-3.5" /> Main Product Image (Featured)</h4>
                       {current.featuredImage ? (
                         <div className="relative inline-block">
-                          <img src={current.featuredImage} alt="" className="w-48 h-48 object-cover rounded-lg border-2 border-primary" />
+                          <img src={current.featuredImage} alt="" className="w-48 h-48 object-contain rounded-lg border-2 border-primary bg-gray-50" />
                           <button type="button" onClick={() => setCurrent(p => ({ ...p, featuredImage: '' }))} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg"><X className="w-3.5 h-3.5" /></button>
                         </div>
                       ) : (
@@ -849,7 +849,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                         {galleryImages.map((img, i) => (
                           <div key={i} className="relative group aspect-square">
-                            <img src={img} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                            <img src={img} alt="" className="w-full h-full object-contain rounded-lg border border-gray-200 bg-gray-50" />
                             <button type="button" onClick={() => removeGalleryImage(img)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
                           </div>
                         ))}
@@ -1045,7 +1045,7 @@ export default function ProductManager({ initialProducts, categories }: Props) {
                   <div className="bg-white p-5 rounded-xl border border-gray-200">
                     <h4 className="font-black text-secondary uppercase tracking-wider text-[11px] mb-4">Product Visibility</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {[{ k: 'showOnHomepage', l: '🏠 Display on Homepage' }, { k: 'showOnFeatured', l: '⭐ Display in Featured Products' }, { k: 'showOnNewArrivals', l: '🆕 Display in New Arrivals' }, { k: 'availableOnline', l: '🌐 Available Online' }, { k: 'availableInStore', l: '🏪 Available In Store' }, { k: 'isHidden', l: '👁️ Hide Product' }].map(b => (
+                      {[{ k: 'isFeatured', l: '⭐ Featured Product' }, { k: 'isHotDeal', l: '🔥 Top Sale' }, { k: 'isOnOffer', l: '🏷 On Offer' }, { k: 'showOnHomepage', l: '🏠 Display on Homepage' }, { k: 'showOnFeatured', l: '⭐ Display in Featured Products' }, { k: 'showOnNewArrivals', l: '🆕 Display in New Arrivals' }, { k: 'availableOnline', l: '🌐 Available Online' }, { k: 'availableInStore', l: '🏪 Available In Store' }, { k: 'isHidden', l: '👁️ Hide Product' }].map(b => (
                         <label key={b.k} className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all ${(current as any)[b.k] ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'}`}>
                           <input type="checkbox" checked={!!(current as any)[b.k]} onChange={e => setCurrent(p => ({ ...p, [b.k]: e.target.checked }))} />
                           <span className="text-xs font-bold">{b.l}</span>

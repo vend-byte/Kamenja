@@ -108,6 +108,52 @@ export default async function HomePage() {
     return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(price);
   };
 
+  // Shared column selection for the admin-toggle-driven homepage sections below
+  // (⭐ Featured Product / 🔥 Top Sale / 🏷 On Offer) so each section always
+  // reflects live admin toggle state — no hardcoded products.
+  const homepageSectionColumns = {
+    id: products.id,
+    code: products.code,
+    name: products.name,
+    slug: products.slug,
+    wholesalePrice: products.wholesalePrice,
+    discountPrice: products.discountPrice,
+    qtyPerCarton: products.qtyPerCarton,
+    stockStatus: products.stockStatus,
+    images: products.images,
+    description: products.description,
+    isOnOffer: products.isOnOffer,
+    isFeatured: products.isFeatured,
+    isNewArrival: products.isNewArrival,
+    isBestSeller: products.isBestSeller,
+    categoryName: categories.name,
+    categorySlug: categories.slug,
+  };
+
+  // ⭐ Featured Products — populated by the "Featured Product" toggle in Admin
+  const featuredToggleProducts = await db
+    .select(homepageSectionColumns)
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.isFeatured, true))
+    .orderBy(desc(products.id));
+
+  // 🔥 Top Sale — populated by the "Top Sale" toggle in Admin
+  const topSaleProducts = await db
+    .select(homepageSectionColumns)
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.isHotDeal, true))
+    .orderBy(desc(products.id));
+
+  // 🏷 On Offer — populated by the "On Offer" toggle in Admin
+  const onOfferProducts = await db
+    .select(homepageSectionColumns)
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(eq(products.isOnOffer, true))
+    .orderBy(desc(products.id));
+
   return (
     <div className="w-full flex flex-col min-h-screen">
       
@@ -274,6 +320,57 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 1B. FEATURED PRODUCTS — admin-toggled via ⭐ Featured Product; auto-hidden when empty */}
+      {featuredToggleProducts.length > 0 && (
+        <section className="py-16 px-4 sm:px-6 bg-white">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-primary flex items-center gap-2">
+                <span>⭐</span> Featured Products
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Hand-picked products our team recommends.
+              </p>
+            </div>
+            <HomeClientProducts products={featuredToggleProducts} settings={settingsData} />
+          </div>
+        </section>
+      )}
+
+      {/* 1C. TOP SALE — admin-toggled via 🔥 Top Sale; auto-hidden when empty */}
+      {topSaleProducts.length > 0 && (
+        <section className="py-16 px-4 sm:px-6 bg-gray-50">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-primary flex items-center gap-2">
+                <span>🔥</span> Top Sale
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Our best-selling products right now.
+              </p>
+            </div>
+            <HomeClientProducts products={topSaleProducts} settings={settingsData} />
+          </div>
+        </section>
+      )}
+
+      {/* 1D. ON OFFER — admin-toggled via 🏷 On Offer; auto-hidden when empty */}
+      {onOfferProducts.length > 0 && (
+        <section className="py-16 px-4 sm:px-6 bg-white">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-primary flex items-center gap-2">
+                <span>🏷️</span> On Offer
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Limited-time discounted prices — grab them while they last.
+              </p>
+            </div>
+            <HomeClientProducts products={onOfferProducts} settings={settingsData} />
+          </div>
+        </section>
+      )}
 
       {/* 2. CATEGORIES GRID */}
       <section className="py-16 px-4 sm:px-6 bg-gray-50">

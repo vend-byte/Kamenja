@@ -92,7 +92,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
                   src={img}
                   alt={p.name}
                   loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  className="absolute inset-0 w-full h-full object-contain hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     e.currentTarget.src = 'https://images.unsplash.com/photo-1510519138101-570d1dca3d66?auto=format&fit=crop&q=80&w=1200';
                   }}
