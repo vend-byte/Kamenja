@@ -9,6 +9,10 @@ export const categories = pgTable('categories', {
   image: text('image'),
   isActive: boolean('is_active').notNull().default(true),
   productCount: integer('product_count').notNull().default(0),
+  // When true, ALL products belonging to this category are shown in the
+  // homepage "Featured Products" section (in addition to any individually
+  // featured products). Toggled from Admin > Categories.
+  isFeatured: boolean('is_featured').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

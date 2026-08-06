@@ -16,6 +16,10 @@ export interface SiteSettings {
   hero_heading: string;
   hero_subheading: string;
   hero_description: string;
+  // Homepage announcement banner (e.g. "Merry Christmas!" or offer alerts),
+  // editable from Admin > Settings and shown to customers in glowing red text.
+  announcement_enabled: string;
+  announcement_message: string;
 }
 
 const fallbackSettings: SiteSettings = {
@@ -36,7 +40,9 @@ const fallbackSettings: SiteSettings = {
   hero_heading: 'Your One-Stop Online Wholesale Store',
   hero_subheading: 'Place Your Order Online, We Deliver To You!',
   hero_description:
-    'Shop thousands of wholesale products online and have your order delivered directly to your shop, business or doorstep anywhere in Kenya.'
+    'Shop thousands of wholesale products online and have your order delivered directly to your shop, business or doorstep anywhere in Kenya.',
+  announcement_enabled: 'false',
+  announcement_message: ''
 };
 
 export async function getSettings(): Promise<SiteSettings> {

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   saveProductAction, deleteProductAction, duplicateProductAction,
-  saveCategoryAction, deleteCategoryAction,
+  saveCategoryAction, deleteCategoryAction, toggleCategoryFeaturedAction,
   updateSettingsAction, updateQuoteStatusAction, deleteQuoteAction,
   importProductsAction, backupDatabaseAction, restoreDatabaseAction,
   updateOrderStatusAction, logoutAdminAction,
@@ -25,7 +25,7 @@ import ProductManager from './ProductManager';
 import BulkImportManager from './BulkImportManager';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Category { id: number; name: string; slug: string; description: string | null; image: string | null; isActive: boolean; }
+interface Category { id: number; name: string; slug: string; description: string | null; image: string | null; isActive: boolean; isFeatured?: boolean; }
 interface Product {
   id: number; code: string; barcode: string | null; name: string; nameLocal: string | null; nameChinese: string | null; slug: string; categoryId: number | null;
   supplier: string | null; description: string | null; features: string | null; specifications: string | null;
@@ -102,7 +102,7 @@ export default function AdminPanel({
   const [showProdModal, setShowProdModal] = useState(false);
   const [showCatModal, setShowCatModal] = useState(false);
   const [curProd, setCurProd] = useState<Partial<Product>>(emptyProduct());
-  const [curCat, setCurCat] = useState<Partial<Category>>({ name: '', description: '', image: '', isActive: true });
+  const [curCat, setCurCat] = useState<Partial<Category>>({ name: '', description: '', image: '', isActive: true, isFeatured: false });
 
   const showToast = (type: 'ok' | 'err', msg: string) => { setToast({ type, msg }); setTimeout(() => setToast(null), 4500); };
   const run = async <T,>(fn: () => Promise<T>) => { setLoading(true); try { return await fn(); } finally { setLoading(false); } };
@@ -188,6 +188,14 @@ export default function AdminPanel({
     if (!confirm('Delete category?')) return;
     const res = await run(() => deleteCategoryAction(id));
     if ((res as any).success) { setCats(c => c.filter(x => x.id !== id)); showToast('ok', 'Category deleted.'); }
+  };
+  // Mark/unmark an entire category as Featured — every product in that
+  // category then appears in the homepage Featured Products section.
+  const handleToggleCatFeatured = async (id: number, next: boolean) => {
+    setCats(c => c.map(x => x.id === id ? { ...x, isFeatured: next } : x));
+    const res = await run(() => toggleCategoryFeaturedAction(id, next));
+    if ((res as any).success) showToast('ok', next ? 'Category marked as Featured — its products now show on the homepage.' : 'Category removed from Featured.');
+    else { setCats(c => c.map(x => x.id === id ? { ...x, isFeatured: !next } : x)); showToast('err', (res as any).error || 'Failed to update category.'); }
   };
   const handleExportCSV = (data: any[], filename: string) => {
     if (!data.length) return;
@@ -503,18 +511,31 @@ export default function AdminPanel({
           {tab === 'categories' && (
             <div className="space-y-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm min-h-[80vh]">
               <div className="flex justify-between items-center border-b pb-4">
-                <h2 className="text-xl font-black text-gray-800">Categories Management</h2>
-                <button onClick={() => { setCurCat({ name: '', description: '', isActive: true }); setShowCatModal(true); }} className="bg-primary hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-2"><Plus className="w-4 h-4" /> Add Category</button>
+                <div>
+                  <h2 className="text-xl font-black text-gray-800">Categories Management</h2>
+                  <p className="text-[11px] text-gray-500 mt-1">Click <span className="font-bold text-secondary">Mark Featured</span> on a category to show ALL of its products in the homepage Featured Products section. Click again to unmark.</p>
+                </div>
+                <button onClick={() => { setCurCat({ name: '', description: '', isActive: true, isFeatured: false }); setShowCatModal(true); }} className="bg-primary hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-2"><Plus className="w-4 h-4" /> Add Category</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {cats.map(c => {
                   const count = prods.filter(p => p.categoryId === c.id).length;
                   return (
-                    <div key={c.id} className={`border rounded-xl p-5 hover:shadow-lg transition-all ${!c.isActive?'opacity-60 bg-gray-50':'bg-white'}`}>
-                      <h3 className="font-black text-primary text-base uppercase mb-1">{c.name}</h3>
+                    <div key={c.id} className={`border rounded-xl p-5 hover:shadow-lg transition-all ${!c.isActive?'opacity-60 bg-gray-50':'bg-white'} ${c.isFeatured ? 'ring-2 ring-secondary border-secondary' : ''}`}>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="font-black text-primary text-base uppercase">{c.name}</h3>
+                        {c.isFeatured && <span className="bg-secondary text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0"><Star className="w-2.5 h-2.5 fill-white"/> FEATURED</span>}
+                      </div>
                       <p className="text-[10px] text-gray-400 font-mono mb-2">{c.slug}</p>
                       <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-md text-[10px]">{count} Products</span>
-                      <div className="pt-4 mt-4 border-t border-gray-100 flex justify-end gap-2">
+                      <div className="pt-4 mt-4 border-t border-gray-100 flex flex-wrap justify-end gap-2">
+                        <button
+                          onClick={() => handleToggleCatFeatured(c.id, !c.isFeatured)}
+                          title={c.isFeatured ? 'Remove this category (and its products) from the homepage Featured Products section' : 'Show all products in this category on the homepage Featured Products section'}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1.5 ${c.isFeatured ? 'text-secondary bg-secondary/10 hover:bg-secondary/20' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${c.isFeatured ? 'fill-secondary' : ''}`}/> {c.isFeatured ? 'Unmark Featured' : 'Mark Featured'}
+                        </button>
                         <button onClick={() => { setCurCat(c); setShowCatModal(true); }} className="text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1.5"><Edit className="w-3.5 h-3.5"/> Edit</button>
                         <button onClick={() => handleDeleteCat(c.id)} className="text-red-500 bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1.5"><Trash2 className="w-3.5 h-3.5"/> Delete</button>
                       </div>
@@ -938,6 +959,34 @@ export default function AdminPanel({
                   <div><label className="block font-bold text-gray-700 mb-1">Business Address</label><input value={sMap.location||''} onChange={e=>setSMap(p=>({...p,location:e.target.value}))} className="w-full p-2 border rounded-lg outline-none focus:border-primary"/></div>
                 </div>
 
+                <div className="col-span-full space-y-3 bg-black/95 rounded-2xl p-5">
+                  <h3 className="font-black text-secondary uppercase tracking-wider text-[11px] border-b border-white/10 pb-1">Homepage Announcement Banner</h3>
+                  <p className="text-[10px] text-gray-300">
+                    Type a message here (e.g. Merry Christmas! 🎄 Enjoy our festive offers, or Big Discounts This Week — Up to 30% Off!) and it will glow in red at the top of the homepage for customers to see. Untick Enable to hide it anytime.
+                  </p>
+                  <label className="flex items-center gap-2 font-bold text-white">
+                    <input type="checkbox" checked={sMap.announcement_enabled === 'true'} onChange={e=>setSMap(p=>({...p, announcement_enabled: e.target.checked ? 'true' : 'false'}))} />
+                    Enable Announcement Banner
+                  </label>
+                  <div>
+                    <label className="block font-bold text-white mb-1">Announcement Message</label>
+                    <textarea
+                      rows={2}
+                      maxLength={200}
+                      placeholder="e.g. Merry Christmas! 🎄 Enjoy special festive discounts on all wholesale orders."
+                      value={sMap.announcement_message || ''}
+                      onChange={e=>setSMap(p=>({...p, announcement_message: e.target.value}))}
+                      className="w-full p-2.5 rounded-lg outline-none text-white bg-white/10 border border-white/20 focus:border-secondary resize-none"
+                    />
+                  </div>
+                  {sMap.announcement_message?.trim() && (
+                    <div className="pt-1">
+                      <p className="text-[10px] text-gray-400 mb-1">Live preview:</p>
+                      <p className="announcement-glow-text font-extrabold text-sm text-center py-2">{sMap.announcement_message}</p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="col-span-full flex justify-end border-t pt-4">
                   <button type="submit" className="bg-primary hover:bg-blue-800 text-white font-bold px-8 py-3 rounded-xl flex gap-2"><Save className="w-4 h-4"/> Save All Settings</button>
                 </div>
@@ -969,6 +1018,13 @@ export default function AdminPanel({
               </div>
 
               <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={curCat.isActive!==false} onChange={e=>setCurCat(p=>({...p, isActive:e.target.checked}))} /> Active</label>
+              <label className="flex items-start gap-2 font-bold bg-secondary/5 border border-secondary/30 rounded-xl p-3">
+                <input type="checkbox" className="mt-0.5" checked={!!curCat.isFeatured} onChange={e=>setCurCat(p=>({...p, isFeatured:e.target.checked}))} />
+                <span>
+                  <span className="block">Featured Category</span>
+                  <span className="block font-normal text-gray-500 text-[10px] mt-0.5">Show ALL products in this category on the homepage Featured Products section.</span>
+                </span>
+              </label>
               <div className="flex justify-end gap-3 pt-4 border-t"><button type="submit" className="w-full bg-secondary hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Save Category</button></div>
             </form>
           </div>

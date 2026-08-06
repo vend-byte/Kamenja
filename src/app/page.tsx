@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { db } from '@/db';
 import { products, categories } from '@/db/schema';
 import { getSettings } from '@/db/settings';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, or } from 'drizzle-orm';
 import { 
   Lock, 
   Wrench, 
@@ -130,12 +130,14 @@ export default async function HomePage() {
     categorySlug: categories.slug,
   };
 
-  // ⭐ Featured Products — populated by the "Featured Product" toggle in Admin
+  // ⭐ Featured Products — populated by EITHER the per-product "Featured Product"
+  // toggle OR by marking an entire category as Featured in Admin > Categories
+  // (in which case every product in that category appears here automatically).
   const featuredToggleProducts = await db
     .select(homepageSectionColumns)
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.isFeatured, true))
+    .where(or(eq(products.isFeatured, true), eq(categories.isFeatured, true)))
     .orderBy(desc(products.id));
 
   // 🔥 Top Sale — populated by the "Top Sale" toggle in Admin
@@ -156,7 +158,18 @@ export default async function HomePage() {
 
   return (
     <div className="w-full flex flex-col min-h-screen">
-      
+
+      {/* 0. ANNOUNCEMENT BANNER — admin-editable message (Admin > Settings),
+          e.g. "Merry Christmas! 🎄" or offer/discount alerts. Glowing red text.
+          Auto-hidden unless enabled with a non-empty message. */}
+      {settingsData.announcement_enabled === 'true' && settingsData.announcement_message?.trim() && (
+        <div className="w-full bg-black py-3 px-4 text-center">
+          <p className="announcement-glow-text font-extrabold text-sm sm:text-lg tracking-wide">
+            {settingsData.announcement_message}
+          </p>
+        </div>
+      )}
+
       {/* 1. HERO SECTION */}
       <section className="bg-gradient-to-br from-[#0B2C63] to-[#0F3D91] text-white py-16 px-4 sm:px-6 relative overflow-hidden">
         {/* Decorative delivery-themed background treatment.

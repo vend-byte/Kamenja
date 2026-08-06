@@ -35,3 +35,17 @@ button:focus-visible, a:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Homepage announcement banner — glowing red text (Admin > Settings) */
+@keyframes announcementGlow {
+  0%, 100% {
+    text-shadow: 0 0 6px rgba(255, 0, 0, 0.55), 0 0 14px rgba(255, 0, 0, 0.4), 0 0 22px rgba(255, 0, 0, 0.25);
+  }
+  50% {
+    text-shadow: 0 0 14px rgba(255, 0, 0, 0.95), 0 0 28px rgba(255, 0, 0, 0.7), 0 0 44px rgba(255, 0, 0, 0.45);
+  }
+}
+.announcement-glow-text {
+  color: #ff1a1a;
+  animation: announcementGlow 1.8s ease-in-out infinite;
+}

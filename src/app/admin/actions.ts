@@ -295,7 +295,7 @@ export async function duplicateProductAction(id: number) {
 export async function saveCategoryAction(data: any) {
   try {
     const slug = slugify(data.name);
-    const payload = { name: data.name.trim(), slug, description: data.description || '', image: data.image || null, isActive: data.isActive !== false };
+    const payload = { name: data.name.trim(), slug, description: data.description || '', image: data.image || null, isActive: data.isActive !== false, isFeatured: !!data.isFeatured };
     if (data.id) {
       await db.update(categories).set(payload).where(eq(categories.id, data.id));
     } else {
@@ -305,6 +305,18 @@ export async function saveCategoryAction(data: any) {
     return { success: true };
   } catch (err: any) {
     return { error: err.message || 'Failed to save category.' };
+  }
+}
+
+// Quick mark/unmark a whole category (and all its products) as Featured on
+// the homepage, without having to open the full category edit form.
+export async function toggleCategoryFeaturedAction(id: number, isFeatured: boolean) {
+  try {
+    await db.update(categories).set({ isFeatured }).where(eq(categories.id, id));
+    revalidatePath('/'); revalidatePath('/admin');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to update category.' };
   }
 }
 
