@@ -73,3 +73,26 @@ Only these 3 files were touched. Nothing else in the project was modified.
 - Turn **off** "Show Hero Banner" in Admin → Settings and the hero disappears completely. Whatever is enabled just below it — the black announcement banner (if turned on) and then the Featured Categories section — moves straight up, so products/categories start right at the top of the page.
 - Turn it back **on** any time to restore the hero exactly as it was; nothing about its design or content changes.
 - This does not affect the announcement banner, which is a separate toggle and unaffected by this change.
+
+---
+
+# Update 3: "Back to Catalog" preserves scroll position
+
+Only these 2 files were touched (1 new, 1 edited). Nothing else in the project was modified.
+
+1. **`src/components/BackToCatalogButton.tsx`** (new) — a small client component that renders exactly like the old "Back to Catalog" link, but when the visitor actually arrived from the catalog listing page (`/products`, including any category/filter/sort in the URL), clicking it triggers the browser's native **back** action instead of a fresh navigation.
+2. **`src/app/products/[slug]/page.tsx`** — swapped the old `<Link href="/products">Back to Catalog</Link>` for `<BackToCatalogButton />`.
+
+## How to apply
+
+1. Copy `src/components/BackToCatalogButton.tsx` into your project (new file).
+2. Copy `src/app/products/[slug]/page.tsx` over your existing one.
+3. No database change, no `npm run db:push` needed — restart `npm run dev` and test:
+   - Go to a category (e.g. Products → Locks & Security), scroll down partway into the grid, click into any product's details, then click "Back to Catalog". You should land back exactly where you were — same row and column, same category filter — not the top of the full catalog.
+   - Works the same way on mobile browsers (swipe-back or tapping the button) since it relies on the browser's own history/scroll restoration, not custom scroll math.
+   - If you open a product page directly (e.g. a shared WhatsApp link, or a fresh tab with no prior page), "Back to Catalog" still works — it just takes you to that product's category page normally, since there's no previous scroll position to restore.
+
+## How it works
+
+- Browsers (and Next.js's App Router) already restore scroll position automatically on true "back" navigation (browser back button, swipe-back gesture) — the problem was that "Back to Catalog" was a forward link to a brand-new `/products` page, not an actual "back" action, so it always reset to the top and dropped the category/filter you had selected.
+- The new button checks `document.referrer`: if the visitor came from `/products` (the catalog listing, with whatever category/sort/search was active), it calls the router's `back()` instead — a true history-back action, so the exact scroll position and filters are restored for free. Any other case (direct link, new tab, a different origin) falls back to a normal link into the product's category page, exactly as before.

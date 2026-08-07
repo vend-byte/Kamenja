@@ -9,13 +9,13 @@ import { generateMetaTitle, generateMetaDescription } from '@/lib/seo';
 import { getSiteUrl } from '@/lib/siteUrl';
 import { eq, and, ne, desc } from 'drizzle-orm';
 import { 
-  ArrowLeft, 
   CheckCircle2, 
   ShieldCheck, 
 } from 'lucide-react';
 import DetailClientActions from '@/components/DetailClientActions';
 import ProductGallery from '@/components/ProductGallery';
 import ProductImage from '@/components/ProductImage';
+import BackToCatalogButton from '@/components/BackToCatalogButton';
 
 interface PageProps {
   params: Promise<{
@@ -246,14 +246,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <span className="text-gray-800 font-semibold truncate max-w-[200px]">{p.name}</span>
         </nav>
 
-        {/* Back Link */}
-        <Link 
-          href="/products" 
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-secondary transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Catalog</span>
-        </Link>
+        {/* Back Link — uses native browser back (preserving scroll position
+            and filters) when the visitor came from the catalog listing;
+            otherwise falls back to a normal link into their category. */}
+        <BackToCatalogButton fallbackHref={p.categorySlug ? `/products?category=${p.categorySlug}` : '/products'} />
 
         {/* Main Product */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
