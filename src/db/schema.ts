@@ -13,6 +13,15 @@ export const categories = pgTable('categories', {
   // homepage "Featured Products" section (in addition to any individually
   // featured products). Toggled from Admin > Categories.
   isFeatured: boolean('is_featured').notNull().default(false),
+  // ─── Featured Categories (homepage) ───
+  // When true, this category (and a selection of its products) appears in
+  // the homepage "Featured Categories" section, right after the hero.
+  // Toggled from Admin > Categories.
+  showOnHomepage: boolean('show_on_homepage').notNull().default(false),
+  // Controls the display order of featured categories on the homepage
+  // (ascending — lower numbers appear first). Set via the ↑/↓ reorder
+  // controls in Admin > Categories.
+  homepageOrder: integer('homepage_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

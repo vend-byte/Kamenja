@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ProductImage from './ProductImage';
 import { ZoomIn, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -17,7 +17,34 @@ export default function ProductGallery({ images, name, fallback, stockStatus }: 
 
   const active = images[activeIndex] || fallback;
 
+  // Wraps around in both directions so the viewer keeps looping through all
+  // product images (last → first, first → last) until the user closes it.
   const goTo = (i: number) => setActiveIndex((i + images.length) % images.length);
+
+  // Keyboard navigation while the lightbox is open (desktop): ← / → move
+  // between images, Esc closes the viewer.
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(activeIndex - 1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); goTo(activeIndex + 1); }
+      else if (e.key === 'Escape') { setZoomOpen(false); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [zoomOpen, activeIndex, images.length]);
+
+  // Swipe left/right to navigate on mobile/touch devices while zoomed in.
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    const SWIPE_THRESHOLD = 40;
+    if (delta > SWIPE_THRESHOLD) goTo(activeIndex - 1);
+    else if (delta < -SWIPE_THRESHOLD) goTo(activeIndex + 1);
+    touchStartX.current = null;
+  };
 
   return (
     <div className="space-y-3">
@@ -102,6 +129,8 @@ export default function ProductGallery({ images, name, fallback, stockStatus }: 
         <div
           className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 sm:p-10"
           onClick={() => setZoomOpen(false)}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           <button
             type="button"
@@ -137,6 +166,9 @@ export default function ProductGallery({ images, name, fallback, stockStatus }: 
                 >
                   <ChevronRight className="w-6 h-6" />
                 </button>
+                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/90 text-xs font-bold bg-white/10 px-2.5 py-1 rounded-full">
+                  {activeIndex + 1} / {images.length}
+                </span>
               </>
             )}
           </div>

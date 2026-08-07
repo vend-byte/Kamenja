@@ -295,11 +295,18 @@ export async function duplicateProductAction(id: number) {
 export async function saveCategoryAction(data: any) {
   try {
     const slug = slugify(data.name);
-    const payload = { name: data.name.trim(), slug, description: data.description || '', image: data.image || null, isActive: data.isActive !== false, isFeatured: !!data.isFeatured };
+    const payload = { name: data.name.trim(), slug, description: data.description || '', image: data.image || null, isActive: data.isActive !== false, isFeatured: !!data.isFeatured, showOnHomepage: !!data.showOnHomepage };
     if (data.id) {
       await db.update(categories).set(payload).where(eq(categories.id, data.id));
     } else {
-      await db.insert(categories).values(payload);
+      // New categories that are added directly onto the homepage go to the
+      // end of the current order.
+      let homepageOrder = 0;
+      if (data.showOnHomepage) {
+        const [maxRow] = await db.select({ max: sql<number>`coalesce(max(${categories.homepageOrder}), -1)` }).from(categories);
+        homepageOrder = (maxRow?.max ?? -1) + 1;
+      }
+      await db.insert(categories).values({ ...payload, homepageOrder });
     }
     revalidatePath('/'); revalidatePath('/admin');
     return { success: true };
@@ -317,6 +324,43 @@ export async function toggleCategoryFeaturedAction(id: number, isFeatured: boole
     return { success: true };
   } catch (err: any) {
     return { error: err.message || 'Failed to update category.' };
+  }
+}
+
+// ─── FEATURED CATEGORIES (homepage) ──────────────────────────────────────────
+
+// Quick show/hide a category from the homepage "Featured Categories" section.
+// Newly-shown categories are appended to the end of the current order.
+export async function toggleCategoryHomepageAction(id: number, showOnHomepage: boolean) {
+  try {
+    if (showOnHomepage) {
+      const [maxRow] = await db.select({ max: sql<number>`coalesce(max(${categories.homepageOrder}), -1)` }).from(categories);
+      const nextOrder = (maxRow?.max ?? -1) + 1;
+      await db.update(categories).set({ showOnHomepage: true, homepageOrder: nextOrder }).where(eq(categories.id, id));
+    } else {
+      await db.update(categories).set({ showOnHomepage: false }).where(eq(categories.id, id));
+    }
+    revalidatePath('/'); revalidatePath('/admin');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to update category.' };
+  }
+}
+
+// Persist the admin's chosen display order for featured homepage categories.
+// `orderedIds` is the full list of featured-category ids in the exact order
+// they should appear on the homepage (index 0 = first).
+export async function reorderHomepageCategoriesAction(orderedIds: number[]) {
+  try {
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        db.update(categories).set({ homepageOrder: index }).where(eq(categories.id, id))
+      )
+    );
+    revalidatePath('/'); revalidatePath('/admin');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to reorder categories.' };
   }
 }
 
