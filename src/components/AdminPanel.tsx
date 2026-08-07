@@ -7,11 +7,12 @@ import {
   MessageSquare, CheckCircle, Copy, TrendingUp, Package, BarChart3, Star, Zap,
   Users, ShieldCheck, FileText, Globe, Printer, ShoppingCart, Image as ImageIcon,
   Bell, Truck, ArrowDown, ArrowUp, RefreshCcw, History, Activity, Building2, Tag,
-  Calendar, DollarSign, PieChart, LineChart
+  Calendar, DollarSign, PieChart, LineChart, Home as HomeIcon
 } from 'lucide-react';
 import {
   saveProductAction, deleteProductAction, duplicateProductAction,
   saveCategoryAction, deleteCategoryAction, toggleCategoryFeaturedAction,
+  toggleCategoryHomepageAction, reorderHomepageCategoriesAction,
   updateSettingsAction, updateQuoteStatusAction, deleteQuoteAction,
   importProductsAction, backupDatabaseAction, restoreDatabaseAction,
   updateOrderStatusAction, logoutAdminAction,
@@ -25,7 +26,7 @@ import ProductManager from './ProductManager';
 import BulkImportManager from './BulkImportManager';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Category { id: number; name: string; slug: string; description: string | null; image: string | null; isActive: boolean; isFeatured?: boolean; }
+interface Category { id: number; name: string; slug: string; description: string | null; image: string | null; isActive: boolean; isFeatured?: boolean; showOnHomepage?: boolean; homepageOrder?: number; }
 interface Product {
   id: number; code: string; barcode: string | null; name: string; nameLocal: string | null; nameChinese: string | null; slug: string; categoryId: number | null;
   supplier: string | null; description: string | null; features: string | null; specifications: string | null;
@@ -196,6 +197,37 @@ export default function AdminPanel({
     const res = await run(() => toggleCategoryFeaturedAction(id, next));
     if ((res as any).success) showToast('ok', next ? 'Category marked as Featured — its products now show on the homepage.' : 'Category removed from Featured.');
     else { setCats(c => c.map(x => x.id === id ? { ...x, isFeatured: !next } : x)); showToast('err', (res as any).error || 'Failed to update category.'); }
+  };
+  // Show/hide a category from the homepage "Featured Categories" section.
+  // Newly-shown categories are appended to the end of the current order.
+  const handleToggleCatHomepage = async (id: number, next: boolean) => {
+    const prevCats = cats;
+    if (next) {
+      const nextOrder = Math.max(-1, ...cats.filter(x => x.showOnHomepage).map(x => x.homepageOrder ?? 0)) + 1;
+      setCats(c => c.map(x => x.id === id ? { ...x, showOnHomepage: true, homepageOrder: nextOrder } : x));
+    } else {
+      setCats(c => c.map(x => x.id === id ? { ...x, showOnHomepage: false } : x));
+    }
+    const res = await run(() => toggleCategoryHomepageAction(id, next));
+    if ((res as any).success) showToast('ok', next ? 'Category added to the homepage Featured Categories section.' : 'Category removed from the homepage.');
+    else { setCats(prevCats); showToast('err', (res as any).error || 'Failed to update category.'); }
+  };
+  // Move a featured category up/down in the homepage display order and
+  // persist the new order for every currently-featured category.
+  const handleMoveCatOrder = async (id: number, direction: 'up' | 'down') => {
+    const featured = cats.filter(x => x.showOnHomepage).sort((a, b) => (a.homepageOrder ?? 0) - (b.homepageOrder ?? 0));
+    const idx = featured.findIndex(x => x.id === id);
+    const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapWith < 0 || swapWith >= featured.length) return;
+    [featured[idx], featured[swapWith]] = [featured[swapWith], featured[idx]];
+    const orderedIds = featured.map(x => x.id);
+    const prevCats = cats;
+    setCats(c => c.map(x => {
+      const newIdx = orderedIds.indexOf(x.id);
+      return newIdx === -1 ? x : { ...x, homepageOrder: newIdx };
+    }));
+    const res = await run(() => reorderHomepageCategoriesAction(orderedIds));
+    if (!(res as any).success) { setCats(prevCats); showToast('err', (res as any).error || 'Failed to reorder categories.'); }
   };
   const handleExportCSV = (data: any[], filename: string) => {
     if (!data.length) return;
@@ -513,22 +545,50 @@ export default function AdminPanel({
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
                   <h2 className="text-xl font-black text-gray-800">Categories Management</h2>
-                  <p className="text-[11px] text-gray-500 mt-1">Click <span className="font-bold text-secondary">Mark Featured</span> on a category to show ALL of its products in the homepage Featured Products section. Click again to unmark.</p>
+                  <p className="text-[11px] text-gray-500 mt-1">Click <span className="font-bold text-secondary">Mark Featured</span> to show ALL of a category&apos;s products in the homepage Featured Products section. Use <span className="font-bold text-primary">Homepage</span> + the ↑/↓ arrows below to control the dedicated Featured Categories section (with its own order and a &quot;View All&quot; button) shown right after the hero banner.</p>
                 </div>
-                <button onClick={() => { setCurCat({ name: '', description: '', isActive: true, isFeatured: false }); setShowCatModal(true); }} className="bg-primary hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-2"><Plus className="w-4 h-4" /> Add Category</button>
+                <button onClick={() => { setCurCat({ name: '', description: '', isActive: true, isFeatured: false, showOnHomepage: false }); setShowCatModal(true); }} className="bg-primary hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-2"><Plus className="w-4 h-4" /> Add Category</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {cats.map(c => {
                   const count = prods.filter(p => p.categoryId === c.id).length;
+                  const featuredOnHome = cats.filter(x => x.showOnHomepage).sort((a, b) => (a.homepageOrder ?? 0) - (b.homepageOrder ?? 0));
+                  const homeIdx = featuredOnHome.findIndex(x => x.id === c.id);
                   return (
                     <div key={c.id} className={`border rounded-xl p-5 hover:shadow-lg transition-all ${!c.isActive?'opacity-60 bg-gray-50':'bg-white'} ${c.isFeatured ? 'ring-2 ring-secondary border-secondary' : ''}`}>
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-black text-primary text-base uppercase">{c.name}</h3>
-                        {c.isFeatured && <span className="bg-secondary text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0"><Star className="w-2.5 h-2.5 fill-white"/> FEATURED</span>}
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          {c.isFeatured && <span className="bg-secondary text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1"><Star className="w-2.5 h-2.5 fill-white"/> FEATURED</span>}
+                          {c.showOnHomepage && <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">#{homeIdx + 1} ON HOMEPAGE</span>}
+                        </div>
                       </div>
                       <p className="text-[10px] text-gray-400 font-mono mb-2">{c.slug}</p>
                       <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-md text-[10px]">{count} Products</span>
-                      <div className="pt-4 mt-4 border-t border-gray-100 flex flex-wrap justify-end gap-2">
+                      <div className="pt-4 mt-4 border-t border-gray-100 flex flex-wrap justify-end items-center gap-2">
+                        {c.showOnHomepage && (
+                          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden mr-auto">
+                            <button
+                              onClick={() => handleMoveCatOrder(c.id, 'up')}
+                              disabled={homeIdx <= 0}
+                              title="Move up in homepage order"
+                              className="p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                            ><ArrowUp className="w-3.5 h-3.5"/></button>
+                            <button
+                              onClick={() => handleMoveCatOrder(c.id, 'down')}
+                              disabled={homeIdx === -1 || homeIdx >= featuredOnHome.length - 1}
+                              title="Move down in homepage order"
+                              className="p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent border-l border-gray-200"
+                            ><ArrowDown className="w-3.5 h-3.5"/></button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleToggleCatHomepage(c.id, !c.showOnHomepage)}
+                          title={c.showOnHomepage ? 'Remove from the homepage Featured Categories section' : 'Show this category (with a selection of its products) on the homepage, right after the hero'}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1.5 ${c.showOnHomepage ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}
+                        >
+                          <HomeIcon className="w-3.5 h-3.5"/> {c.showOnHomepage ? 'On Homepage' : 'Add to Homepage'}
+                        </button>
                         <button
                           onClick={() => handleToggleCatFeatured(c.id, !c.isFeatured)}
                           title={c.isFeatured ? 'Remove this category (and its products) from the homepage Featured Products section' : 'Show all products in this category on the homepage Featured Products section'}
@@ -959,6 +1019,17 @@ export default function AdminPanel({
                   <div><label className="block font-bold text-gray-700 mb-1">Business Address</label><input value={sMap.location||''} onChange={e=>setSMap(p=>({...p,location:e.target.value}))} className="w-full p-2 border rounded-lg outline-none focus:border-primary"/></div>
                 </div>
 
+                <div className="col-span-full space-y-3 bg-primary/5 border border-primary/20 rounded-2xl p-5">
+                  <h3 className="font-black text-primary uppercase tracking-wider text-[11px] border-b border-primary/10 pb-1">Homepage Hero Banner</h3>
+                  <p className="text-[10px] text-gray-500">
+                    The large blue banner at the very top of the homepage ("Your One-Stop Online Wholesale Store", the "How It Works" card, etc.). Turn it off to have your products start immediately after the announcement banner above.
+                  </p>
+                  <label className="flex items-center gap-2 font-bold text-gray-700">
+                    <input type="checkbox" checked={sMap.hero_enabled !== 'false'} onChange={e=>setSMap(p=>({...p, hero_enabled: e.target.checked ? 'true' : 'false'}))} />
+                    Show Hero Banner
+                  </label>
+                </div>
+
                 <div className="col-span-full space-y-3 bg-black/95 rounded-2xl p-5">
                   <h3 className="font-black text-secondary uppercase tracking-wider text-[11px] border-b border-white/10 pb-1">Homepage Announcement Banner</h3>
                   <p className="text-[10px] text-gray-300">
@@ -1023,6 +1094,13 @@ export default function AdminPanel({
                 <span>
                   <span className="block">Featured Category</span>
                   <span className="block font-normal text-gray-500 text-[10px] mt-0.5">Show ALL products in this category on the homepage Featured Products section.</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 font-bold bg-primary/5 border border-primary/30 rounded-xl p-3">
+                <input type="checkbox" className="mt-0.5" checked={!!curCat.showOnHomepage} onChange={e=>setCurCat(p=>({...p, showOnHomepage:e.target.checked}))} />
+                <span>
+                  <span className="block">Show on Homepage</span>
+                  <span className="block font-normal text-gray-500 text-[10px] mt-0.5">Adds this category to the dedicated Featured Categories section right after the hero banner, with its own products and a &quot;View All&quot; button. Order it with the ↑/↓ arrows on the category card.</span>
                 </span>
               </label>
               <div className="flex justify-end gap-3 pt-4 border-t"><button type="submit" className="w-full bg-secondary hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Save Category</button></div>

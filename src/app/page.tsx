@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { db } from '@/db';
 import { products, categories } from '@/db/schema';
 import { getSettings } from '@/db/settings';
-import { eq, desc, or } from 'drizzle-orm';
+import { eq, desc, asc, or } from 'drizzle-orm';
 import { 
   Lock, 
   Wrench, 
@@ -83,6 +83,49 @@ export default async function HomePage() {
   
   // Fetch categories
   const catsList = await db.select().from(categories);
+
+  // ─── FEATURED CATEGORIES (homepage) ────────────────────────────────────
+  // Admin-curated categories (Admin > Categories > "Show on Homepage"),
+  // shown in the exact order set by the ↑/↓ reorder controls
+  // (categories.homepageOrder). Placed immediately after the hero so real
+  // products appear with minimal scrolling.
+  const featuredCategoriesList = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.showOnHomepage, true))
+    .orderBy(asc(categories.homepageOrder));
+
+  const homepageCategoryColumns = {
+    id: products.id,
+    code: products.code,
+    name: products.name,
+    slug: products.slug,
+    wholesalePrice: products.wholesalePrice,
+    discountPrice: products.discountPrice,
+    qtyPerCarton: products.qtyPerCarton,
+    stockStatus: products.stockStatus,
+    images: products.images,
+    description: products.description,
+    isOnOffer: products.isOnOffer,
+    isFeatured: products.isFeatured,
+    isNewArrival: products.isNewArrival,
+    isBestSeller: products.isBestSeller,
+    categoryName: categories.name,
+    categorySlug: categories.slug,
+  };
+
+  const featuredCategories = await Promise.all(
+    featuredCategoriesList.map(async (cat) => {
+      const catProducts = await db
+        .select(homepageCategoryColumns)
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .where(eq(products.categoryId, cat.id))
+        .orderBy(desc(products.id))
+        .limit(8);
+      return { category: cat, products: catProducts };
+    })
+  );
 
   // Fetch 8 featured products (join category to display category name)
   const featuredProductsRaw = await db
@@ -170,7 +213,10 @@ export default async function HomePage() {
         </div>
       )}
 
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION — toggleable from Admin > Settings ("Show Hero Banner").
+          When turned off, product listings begin immediately after the
+          announcement banner (or right at the top if that's off too). */}
+      {settingsData.hero_enabled !== 'false' && (
       <section className="bg-gradient-to-br from-[#0B2C63] to-[#0F3D91] text-white py-16 px-4 sm:px-6 relative overflow-hidden">
         {/* Decorative delivery-themed background treatment.
             NOTE: swap this for a real storefront photo whenever you have one —
@@ -333,6 +379,43 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* 1A. FEATURED CATEGORIES — admin-curated via Admin > Categories > "Show on
+          Homepage", in the exact order set there. Placed immediately after the
+          hero so visitors see real products with minimal scrolling. Auto-hidden
+          when the admin hasn't configured any featured categories yet. */}
+      {featuredCategories.filter(fc => fc.products.length > 0).length > 0 && (
+        <section className="px-4 sm:px-6 bg-white">
+          <div className="max-w-7xl mx-auto">
+            {featuredCategories
+              .filter(fc => fc.products.length > 0)
+              .map((fc, idx) => (
+                <div
+                  key={fc.category.id}
+                  className={`space-y-8 py-10 ${idx !== 0 ? 'border-t border-gray-100' : 'pt-12'}`}
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-primary">{fc.category.name}</h2>
+                      {fc.category.description && (
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">{fc.category.description}</p>
+                      )}
+                    </div>
+                    <Link
+                      href={`/products?category=${fc.category.slug}`}
+                      className="bg-primary hover:bg-blue-800 text-white font-bold text-xs py-2 px-4 rounded transition-colors flex items-center gap-1.5 self-start whitespace-nowrap"
+                    >
+                      <span>View All</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                  <HomeClientProducts products={fc.products} settings={settingsData} />
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       {/* 1B. FEATURED PRODUCTS — admin-toggled via ⭐ Featured Product; auto-hidden when empty */}
       {featuredToggleProducts.length > 0 && (

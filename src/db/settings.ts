@@ -16,6 +16,9 @@ export interface SiteSettings {
   hero_heading: string;
   hero_subheading: string;
   hero_description: string;
+  // Toggle to hide the hero/banner section entirely from Admin > Settings,
+  // so product listings can start immediately after the announcement banner.
+  hero_enabled: string;
   // Homepage announcement banner (e.g. "Merry Christmas!" or offer alerts),
   // editable from Admin > Settings and shown to customers in glowing red text.
   announcement_enabled: string;
@@ -41,6 +44,7 @@ const fallbackSettings: SiteSettings = {
   hero_subheading: 'Place Your Order Online, We Deliver To You!',
   hero_description:
     'Shop thousands of wholesale products online and have your order delivered directly to your shop, business or doorstep anywhere in Kenya.',
+  hero_enabled: 'true',
   announcement_enabled: 'false',
   announcement_message: ''
 };
