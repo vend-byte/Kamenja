@@ -96,3 +96,66 @@ Only these 2 files were touched (1 new, 1 edited). Nothing else in the project w
 
 - Browsers (and Next.js's App Router) already restore scroll position automatically on true "back" navigation (browser back button, swipe-back gesture) — the problem was that "Back to Catalog" was a forward link to a brand-new `/products` page, not an actual "back" action, so it always reset to the top and dropped the category/filter you had selected.
 - The new button checks `document.referrer`: if the visitor came from `/products` (the catalog listing, with whatever category/sort/search was active), it calls the router's `back()` instead — a true history-back action, so the exact scroll position and filters are restored for free. Any other case (direct link, new tab, a different origin) falls back to a normal link into the product's category page, exactly as before.
+
+---
+
+# Update 4: Reliable scroll-position restore (sessionStorage-based)
+
+Testing showed Next.js's built-in back-navigation scroll restoration doesn't reliably kick in for this catalog page, since it re-fetches fresh data from the database on every visit. Update 3's fix (the smart back button) wasn't enough on its own. This update adds a deterministic, storage-based fix that doesn't depend on Next.js's internal caching at all.
+
+Only these 2 files were touched (1 new, 1 edited).
+
+1. **`src/components/CatalogScrollRestorer.tsx`** (new) — a tiny invisible client component that continuously remembers the catalog page's scroll position in the browser's `sessionStorage`, keyed by the *exact* URL (category + sort + stock + search all included), and restores it the instant that exact view is loaded again.
+2. **`src/app/products/page.tsx`** — added `<CatalogScrollRestorer />` (wrapped in `<Suspense>`, which Next.js requires for this).
+
+## How to apply
+
+1. Copy `src/components/CatalogScrollRestorer.tsx` into your project (new file).
+2. Copy `src/app/products/page.tsx` over your existing one.
+3. No database change — restart `npm run dev` and test:
+   - Browse a category, scroll down partway, click into a product, then click "Back to Catalog" (or use your phone's swipe-back gesture, or the browser's back button). You should land back at the exact same scroll position and row/column — not the top.
+   - Try switching categories, scrolling, going into a product, and coming back — each category/sort/search combination remembers its own separate scroll position.
+
+## How it works
+
+- As you scroll the catalog page, the current scroll offset is saved to `sessionStorage` under a key built from the page's exact URL (e.g. `catalog-scroll:/products?category=locks-security`).
+- The moment that exact URL is rendered again — whether you arrived via the back button, a swipe gesture, or clicking "Back to Catalog" — the saved offset is read back and the page scrolls there automatically (with a couple of short retries to account for product images still loading in).
+- `sessionStorage` is per-browser-tab and clears when the tab closes, so it never leaks between visitors or devices, and it's capped to remembering positions for 30 minutes so it doesn't hold onto stale state indefinitely.
+- This works the same way on mobile and desktop, since it's plain browser storage + `window.scrollTo`, not something that depends on any particular navigation method.
+
+---
+
+# Update 5: Fixed — Next.js was overriding the scroll restore
+
+Testing showed the position still reset to top. Root cause: **Next.js automatically scrolls every page to the top on navigation by default** — that behavior was firing after `CatalogScrollRestorer` restored the position, undoing it. There's an official flag to disable that per-navigation (`scroll={false}` / `{ scroll: false }`), which wasn't being used yet.
+
+Only 1 file changed: **`src/components/BackToCatalogButton.tsx`** (rewritten, not new).
+
+## What changed
+
+- The button now always navigates using Next's router with `{ scroll: false }`, which tells Next.js not to reset the scroll position itself — leaving `CatalogScrollRestorer` as the sole thing controlling scroll on that page.
+- It also now reconstructs your **exact previous catalog URL** (category *and* sort *and* stock filter *and* search — not just category) from `document.referrer`, so you return to precisely the view you were on, not a simplified version of it.
+
+## How to apply
+
+1. Copy `src/components/BackToCatalogButton.tsx` over your existing one (just this one file — `CatalogScrollRestorer.tsx` and `src/app/products/page.tsx` from Update 4 stay as they are).
+2. Restart `npm run dev` and test again: category → scroll → product → "Back to Catalog". This time nothing should force it back to the top.
+
+---
+
+# Update 6: Found the real bug — `document.referrer` doesn't work for in-app navigation
+
+Testing showed it still wasn't working. Root cause, finally confirmed: `document.referrer` only reflects the page that caused an actual *browser-level* navigation (e.g. a hard page load) — it does **not** update when you click a Next.js `<Link>`, because that's a client-side ("soft") navigation. So the "did they come from the catalog?" check in Update 5 was almost never true, and the fallback link didn't include your sort/stock filters either, so even that path couldn't find a matching saved scroll position.
+
+This update removes the guesswork entirely: the exact catalog URL you're browsing is now passed along explicitly as you click into a product, so "Back to Catalog" always knows precisely where to return you.
+
+4 files changed:
+
+1. **`src/components/HomeClientProducts.tsx`** — every product card link (image, name, "View Details") now appends `?from=<the exact catalog URL you're currently viewing>` — category, sort, stock filter, and search all included.
+2. **`src/app/products/[slug]/page.tsx`** — reads that `from` value and passes it to the back button (falling back to the product's category page if there isn't one, e.g. a direct/shared link).
+3. **`src/components/BackToCatalogButton.tsx`** (simplified) — now just a plain link to that exact URL with `scroll={false}`; no more referrer-guessing.
+4. **`src/app/page.tsx`** and **`src/app/products/page.tsx`** — wrapped every `<HomeClientProducts />` usage in `<Suspense>`, which Next.js requires now that component reads the current URL.
+
+## How to apply
+
+Copy all 4 files over your existing ones (same paths), plus `README_CHANGES.md`. No database change — restart `npm run dev` and test: category → scroll down → click a product → "Back to Catalog". You should land back exactly where you were, filters and all.

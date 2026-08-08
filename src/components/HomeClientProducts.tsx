@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { Eye, Minus, Plus, ShoppingCart, CheckCircle2 } from 'lucide-react';
 
@@ -34,6 +35,20 @@ interface HomeClientProductsProps {
 
 export default function HomeClientProducts({ products, settings }: HomeClientProductsProps) {
   const { addItem } = useCart();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // The exact URL of the page these product cards are rendered on (e.g.
+  // /products?category=locks-security&sort=price-asc). Appended to each
+  // product's link as ?from=... so the product detail page's "Back to
+  // Catalog" button knows precisely where to return the visitor — same
+  // category, sort, and scroll position — instead of guessing. Only
+  // meaningful when this component is rendered on the actual catalog
+  // listing page; harmless elsewhere (e.g. the homepage).
+  const search = searchParams.toString();
+  const currentCatalogUrl = `${pathname}${search ? `?${search}` : ''}`;
+  const productHref = (slug: string) =>
+    `/products/${slug}?from=${encodeURIComponent(currentCatalogUrl)}`;
 
   // Track chosen quantity per product (defaults to 1 the first time a card is seen)
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -86,7 +101,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
             className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-200"
           >
             {/* ── IMAGE ── */}
-            <Link href={`/products/${p.slug}`} className="block relative">
+            <Link href={productHref(p.slug)} className="block relative">
               <div className="relative bg-gray-100 overflow-hidden" style={{ paddingBottom: '62%' }}>
                 <img
                   src={img}
@@ -153,7 +168,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
 
               {/* Name */}
               <h3 className="text-sm font-extrabold text-primary leading-snug line-clamp-2 hover:text-secondary transition-colors min-h-[2.5rem]">
-                <Link href={`/products/${p.slug}`}>{p.name}</Link>
+                <Link href={productHref(p.slug)}>{p.name}</Link>
               </h3>
 
               {/* Description */}
@@ -224,7 +239,7 @@ export default function HomeClientProducts({ products, settings }: HomeClientPro
 
                 {/* Row 1: View Details (full-width) */}
                 <Link
-                  href={`/products/${p.slug}`}
+                  href={productHref(p.slug)}
                   className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-primary border-2 border-gray-200 hover:border-primary font-bold py-2 rounded-lg text-xs transition-all"
                 >
                   <Eye className="w-3.5 h-3.5 flex-shrink-0" />

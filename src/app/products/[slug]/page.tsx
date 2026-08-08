@@ -21,6 +21,9 @@ interface PageProps {
   params: Promise<{
     slug: string;
   }>;
+  searchParams: Promise<{
+    from?: string;
+  }>;
 }
 
 const SITE_URL = getSiteUrl();
@@ -94,14 +97,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ProductDetailPage({ params }: PageProps) {
+export default async function ProductDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { from } = await searchParams;
 
   const p = await getProductBySlug(slug);
   if (!p) {
     notFound();
   }
   const settingsData = await getSettings();
+
+  // Where "Back to Catalog" should return the visitor to. Prefer the exact
+  // catalog URL they came from (category + sort + stock + search — passed
+  // along by the product card's link as ?from=...) so they land back on
+  // precisely the same filtered view. Only accept it if it actually points
+  // into our own catalog, to guard against a tampered/unexpected value.
+  // Falls back to the product's category page for direct links/shares.
+  const catalogHref = from && from.startsWith('/products')
+    ? from
+    : (p.categorySlug ? `/products?category=${p.categorySlug}` : '/products');
 
   let related: any[] = [];
   if (p.categoryId) {
@@ -246,10 +260,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <span className="text-gray-800 font-semibold truncate max-w-[200px]">{p.name}</span>
         </nav>
 
-        {/* Back Link — uses native browser back (preserving scroll position
-            and filters) when the visitor came from the catalog listing;
-            otherwise falls back to a normal link into their category. */}
-        <BackToCatalogButton fallbackHref={p.categorySlug ? `/products?category=${p.categorySlug}` : '/products'} />
+        {/* Back Link — returns to the exact catalog view (category, sort,
+            stock filter, search) the visitor came from, with the same
+            scroll position restored by CatalogScrollRestorer. */}
+        <BackToCatalogButton href={catalogHref} />
 
         {/* Main Product */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

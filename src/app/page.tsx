@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { db } from '@/db';
 import { products, categories } from '@/db/schema';
@@ -410,7 +410,9 @@ export default async function HomePage() {
                       <ChevronRight className="w-4 h-4" />
                     </Link>
                   </div>
-                  <HomeClientProducts products={fc.products} settings={settingsData} />
+                  <Suspense fallback={null}>
+                    <HomeClientProducts products={fc.products} settings={settingsData} />
+                  </Suspense>
                 </div>
               ))}
           </div>
@@ -429,7 +431,9 @@ export default async function HomePage() {
                 Hand-picked products our team recommends.
               </p>
             </div>
-            <HomeClientProducts products={featuredToggleProducts} settings={settingsData} />
+            <Suspense fallback={null}>
+              <HomeClientProducts products={featuredToggleProducts} settings={settingsData} />
+            </Suspense>
           </div>
         </section>
       )}
@@ -446,7 +450,9 @@ export default async function HomePage() {
                 Our best-selling products right now.
               </p>
             </div>
-            <HomeClientProducts products={topSaleProducts} settings={settingsData} />
+            <Suspense fallback={null}>
+              <HomeClientProducts products={topSaleProducts} settings={settingsData} />
+            </Suspense>
           </div>
         </section>
       )}
@@ -463,7 +469,9 @@ export default async function HomePage() {
                 Limited-time discounted prices — grab them while they last.
               </p>
             </div>
-            <HomeClientProducts products={onOfferProducts} settings={settingsData} />
+            <Suspense fallback={null}>
+              <HomeClientProducts products={onOfferProducts} settings={settingsData} />
+            </Suspense>
           </div>
         </section>
       )}
@@ -569,7 +577,9 @@ export default async function HomePage() {
               </Link>
             </div>
           ) : (
-            <HomeClientProducts products={featuredProductsRaw} settings={settingsData} />
+            <Suspense fallback={null}>
+              <HomeClientProducts products={featuredProductsRaw} settings={settingsData} />
+            </Suspense>
           )}
         </div>
       </section>

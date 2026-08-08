@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { db } from '@/db';
 import { products, categories } from '@/db/schema';
@@ -6,6 +6,7 @@ import { getSettings } from '@/db/settings';
 import { eq, and, or, ilike, asc, desc, sql } from 'drizzle-orm';
 import { Filter, RotateCcw, AlertCircle, ChevronRight, Grid3X3, Tag } from 'lucide-react';
 import HomeClientProducts from '@/components/HomeClientProducts';
+import CatalogScrollRestorer from '@/components/CatalogScrollRestorer';
 import {
   Lock, Wrench, Hammer, Layers, Home as HomeIcon,
   Utensils, Zap, Package, Briefcase, Cog, ShoppingBag
@@ -108,6 +109,13 @@ export default async function ProductsPage({ searchParams }: PageProps) {
 
   return (
     <div className="bg-white min-h-screen">
+      {/* Remembers and restores this exact catalog view's scroll position
+          (same category/sort/stock/search) so returning from a product's
+          detail page lands back at the same row/column — desktop & mobile. */}
+      <Suspense fallback={null}>
+        <CatalogScrollRestorer />
+      </Suspense>
+
       {/* Page Header Bar */}
       <div className="bg-gradient-to-r from-[#0B2C63] to-primary text-white py-8 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-2">
@@ -297,7 +305,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                 </Link>
               </div>
             ) : (
-              <HomeClientProducts products={results} settings={settingsData} />
+              <Suspense fallback={null}>
+                <HomeClientProducts products={results} settings={settingsData} />
+              </Suspense>
             )}
 
             {/* Footer note */}
